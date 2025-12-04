@@ -37,7 +37,6 @@ use crate::error::{Error, SerializerError, SerializerResult};
 ///
 /// ```
 /// # use serde_dyn::Serialize;
-/// # use serde::Serialize as _;
 /// let heterogeneous = [
 ///     &[true, false] as &dyn Serialize,
 ///     &100_u8 as &dyn Serialize,

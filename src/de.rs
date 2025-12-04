@@ -39,7 +39,10 @@ use alloc::vec::Vec;
 ///
 /// let value = <String as serde::Deserialize>::deserialize(deserializer).unwrap();
 /// assert_eq!(value, "Hello, world!");
-/// ```
+/// ```    
+#[diagnostic::on_unimplemented(
+    note = "perfer `<dyn Deserializer>::new` instead of manually implementation"
+)]
 pub trait Deserializer<'de> {
     /// Require the `Deserializer` to figure out how to drive the visitor based
     /// on what data type is in the input.
