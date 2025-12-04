@@ -1,0 +1,19 @@
+[package]
+name = "serde_dyn"
+version = "0.1.0"
+authors = ["Huang Yifan <yifan0610@foxmail.com>"]
+edition = "2024"
+description = "dynamic serialization and deserialization based on serde"
+readme = "README.md"
+repository = "https://github.com/huangyifan0610/serde_dyn"
+license = "MIT OR Apache-2.0"
+keywords = ["serde", "no_std"]
+categories = ["encoding", "no-std"]
+
+[features]
+default = []
+std = ["serde/std"]
+alloc = ["serde/std"]
+
+[dependencies]
+serde = { version = "1.0", default-features = true }

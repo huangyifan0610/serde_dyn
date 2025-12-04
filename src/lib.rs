@@ -1,0 +1,6 @@
+//! TODO: crate-level documentation
+
+#![cfg_attr(not(feature = "std"), no_std)]
+
+#[cfg(all(not(feature = "std"), feature = "alloc"))]
+extern crate alloc;
