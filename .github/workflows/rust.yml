@@ -2,25 +2,28 @@ name: Rust
 
 on:
   push:
-    branches: [ "master" ]
+    branches: ["master"]
   pull_request:
-    branches: [ "master" ]
+    branches: ["master"]
 
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
-    - name: Build (std)
-      run: cargo build --verbose --features=std
-    - name: Run tests (std)
-      run: cargo test --verbose --features=std
-    - name: Build (no-default-features)
-      run: cargo build --verbose --no-default-features
-    - name: Run tests (no-default-features)
-      run: cargo test --verbose --no-default-features
+      - uses: actions/checkout@v4
+      - name: Build (std)
+        run: cargo build --verbose --no-default-features --features=std
+      - name: Run tests (std)
+        run: cargo test --verbose --no-default-features --features=std
+      - name: Build (alloc)
+        run: cargo build --verbose --no-default-features --features=alloc
+      - name: Run tests (alloc)
+        run: cargo test --verbose --no-default-features --features=alloc
+      - name: Build (no-alloc)
+        run: cargo build --verbose --no-default-features
+      - name: Run tests (no-alloc)
+        run: cargo test --verbose --no-default-features

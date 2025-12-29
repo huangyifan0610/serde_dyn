@@ -3,15 +3,13 @@
 //! This module provides traits and implementations for dynamic deserialization, allowing
 //! deserialization without knowing concrete types at compile time.
 
-use core::{fmt, mem};
+use core::{error, fmt, mem};
 
-use serde::de::VariantAccess as _;
-
-use crate::error::{DeserializerError, DeserializerResult, Error};
-
-#[cfg(not(feature = "std"))]
-use alloc::string::String;
-#[cfg(not(feature = "std"))]
+#[cfg(all(not(feature = "std"), feature = "alloc"))]
+use alloc::boxed::Box;
+#[cfg(all(not(feature = "std"), feature = "alloc"))]
+use alloc::string::{String, ToString};
+#[cfg(all(not(feature = "std"), feature = "alloc"))]
 use alloc::vec::Vec;
 
 /// A data format that can dynamically deserialize the data structure supported by [`serde`].
@@ -278,9 +276,9 @@ impl<'de> dyn Deserializer<'de> {
 }
 
 impl<'de> serde::Deserializer<'de> for &mut (dyn Deserializer<'de> + '_) {
-    type Error = Error;
+    type Error = DeserializeError;
 
-    fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Error>
+    fn deserialize_any<V>(self, visitor: V) -> DeserializeResult<V::Value>
     where
         V: serde::de::Visitor<'de>,
     {
@@ -290,11 +288,11 @@ impl<'de> serde::Deserializer<'de> for &mut (dyn Deserializer<'de> + '_) {
             InplaceVisitor::Value(value) => Ok(value),
             // The `unwrap_err` never panics because `result` is `Ok(_)` if and only if the
             // `visitor` is `Value(_)`.
-            _ => Err(Error::from(result.unwrap_err())),
+            _ => Err(DeserializeError::from(result.unwrap_err())),
         }
     }
 
-    fn deserialize_bool<V>(self, visitor: V) -> Result<V::Value, Error>
+    fn deserialize_bool<V>(self, visitor: V) -> DeserializeResult<V::Value>
     where
         V: serde::de::Visitor<'de>,
     {
@@ -304,11 +302,11 @@ impl<'de> serde::Deserializer<'de> for &mut (dyn Deserializer<'de> + '_) {
             InplaceVisitor::Value(value) => Ok(value),
             // The `unwrap_err` never panics because `result` is `Ok(_)` if and only if the
             // `visitor` is `Value(_)`.
-            _ => Err(Error::from(result.unwrap_err())),
+            _ => Err(DeserializeError::from(result.unwrap_err())),
         }
     }
 
-    fn deserialize_i8<V>(self, visitor: V) -> Result<V::Value, Error>
+    fn deserialize_i8<V>(self, visitor: V) -> DeserializeResult<V::Value>
     where
         V: serde::de::Visitor<'de>,
     {
@@ -318,11 +316,11 @@ impl<'de> serde::Deserializer<'de> for &mut (dyn Deserializer<'de> + '_) {
             InplaceVisitor::Value(value) => Ok(value),
             // The `unwrap_err` never panics because `result` is `Ok(_)` if and only if the
             // `visitor` is `Value(_)`.
-            _ => Err(Error::from(result.unwrap_err())),
+            _ => Err(DeserializeError::from(result.unwrap_err())),
         }
     }
 
-    fn deserialize_i16<V>(self, visitor: V) -> Result<V::Value, Error>
+    fn deserialize_i16<V>(self, visitor: V) -> DeserializeResult<V::Value>
     where
         V: serde::de::Visitor<'de>,
     {
@@ -332,11 +330,11 @@ impl<'de> serde::Deserializer<'de> for &mut (dyn Deserializer<'de> + '_) {
             InplaceVisitor::Value(value) => Ok(value),
             // The `unwrap_err` never panics because `result` is `Ok(_)` if and only if the
             // `visitor` is `Value(_)`.
-            _ => Err(Error::from(result.unwrap_err())),
+            _ => Err(DeserializeError::from(result.unwrap_err())),
         }
     }
 
-    fn deserialize_i32<V>(self, visitor: V) -> Result<V::Value, Error>
+    fn deserialize_i32<V>(self, visitor: V) -> DeserializeResult<V::Value>
     where
         V: serde::de::Visitor<'de>,
     {
@@ -346,11 +344,11 @@ impl<'de> serde::Deserializer<'de> for &mut (dyn Deserializer<'de> + '_) {
             InplaceVisitor::Value(value) => Ok(value),
             // The `unwrap_err` never panics because `result` is `Ok(_)` if and only if the
             // `visitor` is `Value(_)`.
-            _ => Err(Error::from(result.unwrap_err())),
+            _ => Err(DeserializeError::from(result.unwrap_err())),
         }
     }
 
-    fn deserialize_i64<V>(self, visitor: V) -> Result<V::Value, Error>
+    fn deserialize_i64<V>(self, visitor: V) -> DeserializeResult<V::Value>
     where
         V: serde::de::Visitor<'de>,
     {
@@ -360,11 +358,11 @@ impl<'de> serde::Deserializer<'de> for &mut (dyn Deserializer<'de> + '_) {
             InplaceVisitor::Value(value) => Ok(value),
             // The `unwrap_err` never panics because `result` is `Ok(_)` if and only if the
             // `visitor` is `Value(_)`.
-            _ => Err(Error::from(result.unwrap_err())),
+            _ => Err(DeserializeError::from(result.unwrap_err())),
         }
     }
 
-    fn deserialize_i128<V>(self, visitor: V) -> Result<V::Value, Error>
+    fn deserialize_i128<V>(self, visitor: V) -> DeserializeResult<V::Value>
     where
         V: serde::de::Visitor<'de>,
     {
@@ -374,11 +372,11 @@ impl<'de> serde::Deserializer<'de> for &mut (dyn Deserializer<'de> + '_) {
             InplaceVisitor::Value(value) => Ok(value),
             // The `unwrap_err` never panics because `result` is `Ok(_)` if and only if the
             // `visitor` is `Value(_)`.
-            _ => Err(Error::from(result.unwrap_err())),
+            _ => Err(DeserializeError::from(result.unwrap_err())),
         }
     }
 
-    fn deserialize_u8<V>(self, visitor: V) -> Result<V::Value, Error>
+    fn deserialize_u8<V>(self, visitor: V) -> DeserializeResult<V::Value>
     where
         V: serde::de::Visitor<'de>,
     {
@@ -388,11 +386,11 @@ impl<'de> serde::Deserializer<'de> for &mut (dyn Deserializer<'de> + '_) {
             InplaceVisitor::Value(value) => Ok(value),
             // The `unwrap_err` never panics because `result` is `Ok(_)` if and only if the
             // `visitor` is `Value(_)`.
-            _ => Err(Error::from(result.unwrap_err())),
+            _ => Err(DeserializeError::from(result.unwrap_err())),
         }
     }
 
-    fn deserialize_u16<V>(self, visitor: V) -> Result<V::Value, Error>
+    fn deserialize_u16<V>(self, visitor: V) -> DeserializeResult<V::Value>
     where
         V: serde::de::Visitor<'de>,
     {
@@ -402,11 +400,11 @@ impl<'de> serde::Deserializer<'de> for &mut (dyn Deserializer<'de> + '_) {
             InplaceVisitor::Value(value) => Ok(value),
             // The `unwrap_err` never panics because `result` is `Ok(_)` if and only if the
             // `visitor` is `Value(_)`.
-            _ => Err(Error::from(result.unwrap_err())),
+            _ => Err(DeserializeError::from(result.unwrap_err())),
         }
     }
 
-    fn deserialize_u32<V>(self, visitor: V) -> Result<V::Value, Error>
+    fn deserialize_u32<V>(self, visitor: V) -> DeserializeResult<V::Value>
     where
         V: serde::de::Visitor<'de>,
     {
@@ -416,11 +414,11 @@ impl<'de> serde::Deserializer<'de> for &mut (dyn Deserializer<'de> + '_) {
             InplaceVisitor::Value(value) => Ok(value),
             // The `unwrap_err` never panics because `result` is `Ok(_)` if and only if the
             // `visitor` is `Value(_)`.
-            _ => Err(Error::from(result.unwrap_err())),
+            _ => Err(DeserializeError::from(result.unwrap_err())),
         }
     }
 
-    fn deserialize_u64<V>(self, visitor: V) -> Result<V::Value, Error>
+    fn deserialize_u64<V>(self, visitor: V) -> DeserializeResult<V::Value>
     where
         V: serde::de::Visitor<'de>,
     {
@@ -430,11 +428,11 @@ impl<'de> serde::Deserializer<'de> for &mut (dyn Deserializer<'de> + '_) {
             InplaceVisitor::Value(value) => Ok(value),
             // The `unwrap_err` never panics because `result` is `Ok(_)` if and only if the
             // `visitor` is `Value(_)`.
-            _ => Err(Error::from(result.unwrap_err())),
+            _ => Err(DeserializeError::from(result.unwrap_err())),
         }
     }
 
-    fn deserialize_u128<V>(self, visitor: V) -> Result<V::Value, Error>
+    fn deserialize_u128<V>(self, visitor: V) -> DeserializeResult<V::Value>
     where
         V: serde::de::Visitor<'de>,
     {
@@ -444,11 +442,11 @@ impl<'de> serde::Deserializer<'de> for &mut (dyn Deserializer<'de> + '_) {
             InplaceVisitor::Value(value) => Ok(value),
             // The `unwrap_err` never panics because `result` is `Ok(_)` if and only if the
             // `visitor` is `Value(_)`.
-            _ => Err(Error::from(result.unwrap_err())),
+            _ => Err(DeserializeError::from(result.unwrap_err())),
         }
     }
 
-    fn deserialize_f32<V>(self, visitor: V) -> Result<V::Value, Error>
+    fn deserialize_f32<V>(self, visitor: V) -> DeserializeResult<V::Value>
     where
         V: serde::de::Visitor<'de>,
     {
@@ -458,11 +456,11 @@ impl<'de> serde::Deserializer<'de> for &mut (dyn Deserializer<'de> + '_) {
             InplaceVisitor::Value(value) => Ok(value),
             // The `unwrap_err` never panics because `result` is `Ok(_)` if and only if the
             // `visitor` is `Value(_)`.
-            _ => Err(Error::from(result.unwrap_err())),
+            _ => Err(DeserializeError::from(result.unwrap_err())),
         }
     }
 
-    fn deserialize_f64<V>(self, visitor: V) -> Result<V::Value, Error>
+    fn deserialize_f64<V>(self, visitor: V) -> DeserializeResult<V::Value>
     where
         V: serde::de::Visitor<'de>,
     {
@@ -472,11 +470,11 @@ impl<'de> serde::Deserializer<'de> for &mut (dyn Deserializer<'de> + '_) {
             InplaceVisitor::Value(value) => Ok(value),
             // The `unwrap_err` never panics because `result` is `Ok(_)` if and only if the
             // `visitor` is `Value(_)`.
-            _ => Err(Error::from(result.unwrap_err())),
+            _ => Err(DeserializeError::from(result.unwrap_err())),
         }
     }
 
-    fn deserialize_char<V>(self, visitor: V) -> Result<V::Value, Error>
+    fn deserialize_char<V>(self, visitor: V) -> DeserializeResult<V::Value>
     where
         V: serde::de::Visitor<'de>,
     {
@@ -486,11 +484,11 @@ impl<'de> serde::Deserializer<'de> for &mut (dyn Deserializer<'de> + '_) {
             InplaceVisitor::Value(value) => Ok(value),
             // The `unwrap_err` never panics because `result` is `Ok(_)` if and only if the
             // `visitor` is `Value(_)`.
-            _ => Err(Error::from(result.unwrap_err())),
+            _ => Err(DeserializeError::from(result.unwrap_err())),
         }
     }
 
-    fn deserialize_str<V>(self, visitor: V) -> Result<V::Value, Error>
+    fn deserialize_str<V>(self, visitor: V) -> DeserializeResult<V::Value>
     where
         V: serde::de::Visitor<'de>,
     {
@@ -500,11 +498,11 @@ impl<'de> serde::Deserializer<'de> for &mut (dyn Deserializer<'de> + '_) {
             InplaceVisitor::Value(value) => Ok(value),
             // The `unwrap_err` never panics because `result` is `Ok(_)` if and only if the
             // `visitor` is `Value(_)`.
-            _ => Err(Error::from(result.unwrap_err())),
+            _ => Err(DeserializeError::from(result.unwrap_err())),
         }
     }
 
-    fn deserialize_string<V>(self, visitor: V) -> Result<V::Value, Error>
+    fn deserialize_string<V>(self, visitor: V) -> DeserializeResult<V::Value>
     where
         V: serde::de::Visitor<'de>,
     {
@@ -514,11 +512,11 @@ impl<'de> serde::Deserializer<'de> for &mut (dyn Deserializer<'de> + '_) {
             InplaceVisitor::Value(value) => Ok(value),
             // The `unwrap_err` never panics because `result` is `Ok(_)` if and only if the
             // `visitor` is `Value(_)`.
-            _ => Err(Error::from(result.unwrap_err())),
+            _ => Err(DeserializeError::from(result.unwrap_err())),
         }
     }
 
-    fn deserialize_bytes<V>(self, visitor: V) -> Result<V::Value, Error>
+    fn deserialize_bytes<V>(self, visitor: V) -> DeserializeResult<V::Value>
     where
         V: serde::de::Visitor<'de>,
     {
@@ -528,11 +526,11 @@ impl<'de> serde::Deserializer<'de> for &mut (dyn Deserializer<'de> + '_) {
             InplaceVisitor::Value(value) => Ok(value),
             // The `unwrap_err` never panics because `result` is `Ok(_)` if and only if the
             // `visitor` is `Value(_)`.
-            _ => Err(Error::from(result.unwrap_err())),
+            _ => Err(DeserializeError::from(result.unwrap_err())),
         }
     }
 
-    fn deserialize_byte_buf<V>(self, visitor: V) -> Result<V::Value, Error>
+    fn deserialize_byte_buf<V>(self, visitor: V) -> DeserializeResult<V::Value>
     where
         V: serde::de::Visitor<'de>,
     {
@@ -542,11 +540,11 @@ impl<'de> serde::Deserializer<'de> for &mut (dyn Deserializer<'de> + '_) {
             InplaceVisitor::Value(value) => Ok(value),
             // The `unwrap_err` never panics because `result` is `Ok(_)` if and only if the
             // `visitor` is `Value(_)`.
-            _ => Err(Error::from(result.unwrap_err())),
+            _ => Err(DeserializeError::from(result.unwrap_err())),
         }
     }
 
-    fn deserialize_option<V>(self, visitor: V) -> Result<V::Value, Error>
+    fn deserialize_option<V>(self, visitor: V) -> DeserializeResult<V::Value>
     where
         V: serde::de::Visitor<'de>,
     {
@@ -556,11 +554,11 @@ impl<'de> serde::Deserializer<'de> for &mut (dyn Deserializer<'de> + '_) {
             InplaceVisitor::Value(value) => Ok(value),
             // The `unwrap_err` never panics because `result` is `Ok(_)` if and only if the
             // `visitor` is `Value(_)`.
-            _ => Err(Error::from(result.unwrap_err())),
+            _ => Err(DeserializeError::from(result.unwrap_err())),
         }
     }
 
-    fn deserialize_unit<V>(self, visitor: V) -> Result<V::Value, Error>
+    fn deserialize_unit<V>(self, visitor: V) -> DeserializeResult<V::Value>
     where
         V: serde::de::Visitor<'de>,
     {
@@ -570,11 +568,15 @@ impl<'de> serde::Deserializer<'de> for &mut (dyn Deserializer<'de> + '_) {
             InplaceVisitor::Value(value) => Ok(value),
             // The `unwrap_err` never panics because `result` is `Ok(_)` if and only if the
             // `visitor` is `Value(_)`.
-            _ => Err(Error::from(result.unwrap_err())),
+            _ => Err(DeserializeError::from(result.unwrap_err())),
         }
     }
 
-    fn deserialize_unit_struct<V>(self, name: &'static str, visitor: V) -> Result<V::Value, Error>
+    fn deserialize_unit_struct<V>(
+        self,
+        name: &'static str,
+        visitor: V,
+    ) -> DeserializeResult<V::Value>
     where
         V: serde::de::Visitor<'de>,
     {
@@ -584,7 +586,7 @@ impl<'de> serde::Deserializer<'de> for &mut (dyn Deserializer<'de> + '_) {
             InplaceVisitor::Value(value) => Ok(value),
             // The `unwrap_err` never panics because `result` is `Ok(_)` if and only if the
             // `visitor` is `Value(_)`.
-            _ => Err(Error::from(result.unwrap_err())),
+            _ => Err(DeserializeError::from(result.unwrap_err())),
         }
     }
 
@@ -592,7 +594,7 @@ impl<'de> serde::Deserializer<'de> for &mut (dyn Deserializer<'de> + '_) {
         self,
         name: &'static str,
         visitor: V,
-    ) -> Result<V::Value, Error>
+    ) -> DeserializeResult<V::Value>
     where
         V: serde::de::Visitor<'de>,
     {
@@ -602,11 +604,11 @@ impl<'de> serde::Deserializer<'de> for &mut (dyn Deserializer<'de> + '_) {
             InplaceVisitor::Value(value) => Ok(value),
             // The `unwrap_err` never panics because `result` is `Ok(_)` if and only if the
             // `visitor` is `Value(_)`.
-            _ => Err(Error::from(result.unwrap_err())),
+            _ => Err(DeserializeError::from(result.unwrap_err())),
         }
     }
 
-    fn deserialize_seq<V>(self, visitor: V) -> Result<V::Value, Error>
+    fn deserialize_seq<V>(self, visitor: V) -> DeserializeResult<V::Value>
     where
         V: serde::de::Visitor<'de>,
     {
@@ -616,11 +618,11 @@ impl<'de> serde::Deserializer<'de> for &mut (dyn Deserializer<'de> + '_) {
             InplaceVisitor::Value(value) => Ok(value),
             // The `unwrap_err` never panics because `result` is `Ok(_)` if and only if the
             // `visitor` is `Value(_)`.
-            _ => Err(Error::from(result.unwrap_err())),
+            _ => Err(DeserializeError::from(result.unwrap_err())),
         }
     }
 
-    fn deserialize_tuple<V>(self, len: usize, visitor: V) -> Result<V::Value, Error>
+    fn deserialize_tuple<V>(self, len: usize, visitor: V) -> DeserializeResult<V::Value>
     where
         V: serde::de::Visitor<'de>,
     {
@@ -630,7 +632,7 @@ impl<'de> serde::Deserializer<'de> for &mut (dyn Deserializer<'de> + '_) {
             InplaceVisitor::Value(value) => Ok(value),
             // The `unwrap_err` never panics because `result` is `Ok(_)` if and only if the
             // `visitor` is `Value(_)`.
-            _ => Err(Error::from(result.unwrap_err())),
+            _ => Err(DeserializeError::from(result.unwrap_err())),
         }
     }
 
@@ -639,7 +641,7 @@ impl<'de> serde::Deserializer<'de> for &mut (dyn Deserializer<'de> + '_) {
         name: &'static str,
         len: usize,
         visitor: V,
-    ) -> Result<V::Value, Error>
+    ) -> DeserializeResult<V::Value>
     where
         V: serde::de::Visitor<'de>,
     {
@@ -649,11 +651,11 @@ impl<'de> serde::Deserializer<'de> for &mut (dyn Deserializer<'de> + '_) {
             InplaceVisitor::Value(value) => Ok(value),
             // The `unwrap_err` never panics because `result` is `Ok(_)` if and only if the
             // `visitor` is `Value(_)`.
-            _ => Err(Error::from(result.unwrap_err())),
+            _ => Err(DeserializeError::from(result.unwrap_err())),
         }
     }
 
-    fn deserialize_map<V>(self, visitor: V) -> Result<V::Value, Error>
+    fn deserialize_map<V>(self, visitor: V) -> DeserializeResult<V::Value>
     where
         V: serde::de::Visitor<'de>,
     {
@@ -663,7 +665,7 @@ impl<'de> serde::Deserializer<'de> for &mut (dyn Deserializer<'de> + '_) {
             InplaceVisitor::Value(value) => Ok(value),
             // The `unwrap_err` never panics because `result` is `Ok(_)` if and only if the
             // `visitor` is `Value(_)`.
-            _ => Err(Error::from(result.unwrap_err())),
+            _ => Err(DeserializeError::from(result.unwrap_err())),
         }
     }
 
@@ -672,7 +674,7 @@ impl<'de> serde::Deserializer<'de> for &mut (dyn Deserializer<'de> + '_) {
         name: &'static str,
         fields: &'static [&'static str],
         visitor: V,
-    ) -> Result<V::Value, Error>
+    ) -> DeserializeResult<V::Value>
     where
         V: serde::de::Visitor<'de>,
     {
@@ -682,7 +684,7 @@ impl<'de> serde::Deserializer<'de> for &mut (dyn Deserializer<'de> + '_) {
             InplaceVisitor::Value(value) => Ok(value),
             // The `unwrap_err` never panics because `result` is `Ok(_)` if and only if the
             // `visitor` is `Value(_)`.
-            _ => Err(Error::from(result.unwrap_err())),
+            _ => Err(DeserializeError::from(result.unwrap_err())),
         }
     }
 
@@ -691,7 +693,7 @@ impl<'de> serde::Deserializer<'de> for &mut (dyn Deserializer<'de> + '_) {
         name: &'static str,
         variants: &'static [&'static str],
         visitor: V,
-    ) -> Result<V::Value, Error>
+    ) -> DeserializeResult<V::Value>
     where
         V: serde::de::Visitor<'de>,
     {
@@ -701,11 +703,11 @@ impl<'de> serde::Deserializer<'de> for &mut (dyn Deserializer<'de> + '_) {
             InplaceVisitor::Value(value) => Ok(value),
             // The `unwrap_err` never panics because `result` is `Ok(_)` if and only if the
             // `visitor` is `Value(_)`.
-            _ => Err(Error::from(result.unwrap_err())),
+            _ => Err(DeserializeError::from(result.unwrap_err())),
         }
     }
 
-    fn deserialize_identifier<V>(self, visitor: V) -> Result<V::Value, Error>
+    fn deserialize_identifier<V>(self, visitor: V) -> DeserializeResult<V::Value>
     where
         V: serde::de::Visitor<'de>,
     {
@@ -715,11 +717,11 @@ impl<'de> serde::Deserializer<'de> for &mut (dyn Deserializer<'de> + '_) {
             InplaceVisitor::Value(value) => Ok(value),
             // The `unwrap_err` never panics because `result` is `Ok(_)` if and only if the
             // `visitor` is `Value(_)`.
-            _ => Err(Error::from(result.unwrap_err())),
+            _ => Err(DeserializeError::from(result.unwrap_err())),
         }
     }
 
-    fn deserialize_ignored_any<V>(self, visitor: V) -> Result<V::Value, Error>
+    fn deserialize_ignored_any<V>(self, visitor: V) -> DeserializeResult<V::Value>
     where
         V: serde::de::Visitor<'de>,
     {
@@ -729,7 +731,7 @@ impl<'de> serde::Deserializer<'de> for &mut (dyn Deserializer<'de> + '_) {
             InplaceVisitor::Value(value) => Ok(value),
             // The `unwrap_err` never panics because `result` is `Ok(_)` if and only if the
             // `visitor` is `Value(_)`.
-            _ => Err(Error::from(result.unwrap_err())),
+            _ => Err(DeserializeError::from(result.unwrap_err())),
         }
     }
 
@@ -739,7 +741,7 @@ impl<'de> serde::Deserializer<'de> for &mut (dyn Deserializer<'de> + '_) {
     }
 }
 
-/// The dyn-compatible version of the trait [`serde::de::DeserializeSeed`].
+/// The dyn-compatible version of the [`serde::de::DeserializeSeed`] trait.
 ///
 /// We cannot perform type-erasure on [`serde::Deserialize`] since it's stateless. But luckly,
 /// `DeserializeSeed` could receive our custom data - "seed". In the `dyn_deserialize` procedure,
@@ -750,7 +752,10 @@ pub trait DeserializeSeed<'de> {
     /// Performs stateful deserialization with given dynamic deserializer.
     ///
     /// Also see [`serde::de::DeserializeSeed::deserialize`].
-    fn dyn_deserialize(&mut self, deserializer: &mut dyn Deserializer<'de>) -> Result<(), Error>;
+    fn dyn_deserialize(
+        &mut self,
+        deserializer: &mut dyn Deserializer<'de>,
+    ) -> DeserializeResult<()>;
 }
 
 impl<'de> serde::de::DeserializeSeed<'de> for &mut (dyn DeserializeSeed<'de> + '_) {
@@ -764,12 +769,12 @@ impl<'de> serde::de::DeserializeSeed<'de> for &mut (dyn DeserializeSeed<'de> + '
         let result = self.dyn_deserialize(&mut deserializer);
         match deserializer {
             InplaceDeserializer::Error(error) => Err(error),
-            _ => result.map_err(Error::into_de_error),
+            _ => result.map_err(DeserializeError::into_de_error),
         }
     }
 }
 
-/// The dyn-compatible version of the trait [`serde::de::Visitor`].
+/// The dyn-compatible version of the [`serde::de::Visitor`] trait.
 ///
 /// This trait represents a visitor that walks through a deserializer.
 pub trait Visitor<'de> {
@@ -781,123 +786,126 @@ pub trait Visitor<'de> {
     /// The input contains a boolean.
     ///
     /// Also see [`serde::de::Visitor::visit_bool`].
-    fn dyn_visit_bool(&mut self, v: bool) -> Result<(), Error>;
+    fn dyn_visit_bool(&mut self, v: bool) -> DeserializeResult<()>;
 
     /// The input contains an `i8`.
     ///
     /// Also see [`serde::de::Visitor::visit_i8`].
-    fn dyn_visit_i8(&mut self, v: i8) -> Result<(), Error>;
+    fn dyn_visit_i8(&mut self, v: i8) -> DeserializeResult<()>;
 
     /// The input contains an `i16`.
     ///
     /// Also see [`serde::de::Visitor::visit_i16`].
-    fn dyn_visit_i16(&mut self, v: i16) -> Result<(), Error>;
+    fn dyn_visit_i16(&mut self, v: i16) -> DeserializeResult<()>;
 
     /// The input contains an `i32`.
     ///
     /// Also see [`serde::de::Visitor::visit_i32`].
-    fn dyn_visit_i32(&mut self, v: i32) -> Result<(), Error>;
+    fn dyn_visit_i32(&mut self, v: i32) -> DeserializeResult<()>;
 
     /// The input contains an `i64`.
     ///
     /// Also see [`serde::de::Visitor::visit_i64`].
-    fn dyn_visit_i64(&mut self, v: i64) -> Result<(), Error>;
+    fn dyn_visit_i64(&mut self, v: i64) -> DeserializeResult<()>;
 
     /// The input contains an `i128`.
     ///
     /// Also see [`serde::de::Visitor::visit_i128`].
-    fn dyn_visit_i128(&mut self, v: i128) -> Result<(), Error>;
+    fn dyn_visit_i128(&mut self, v: i128) -> DeserializeResult<()>;
 
     /// The input contains an `u8`.
     ///
     /// Also see [`serde::de::Visitor::visit_u8`].
-    fn dyn_visit_u8(&mut self, v: u8) -> Result<(), Error>;
+    fn dyn_visit_u8(&mut self, v: u8) -> DeserializeResult<()>;
 
     /// The input contains an `u16`.
     ///
     /// Also see [`serde::de::Visitor::visit_u16`].
-    fn dyn_visit_u16(&mut self, v: u16) -> Result<(), Error>;
+    fn dyn_visit_u16(&mut self, v: u16) -> DeserializeResult<()>;
 
     /// The input contains an `u32`.
     ///
     /// Also see [`serde::de::Visitor::visit_u32`].
-    fn dyn_visit_u32(&mut self, v: u32) -> Result<(), Error>;
+    fn dyn_visit_u32(&mut self, v: u32) -> DeserializeResult<()>;
 
     /// The input contains an `u64`.
     ///
     /// Also see [`serde::de::Visitor::visit_u64`].
-    fn dyn_visit_u64(&mut self, v: u64) -> Result<(), Error>;
+    fn dyn_visit_u64(&mut self, v: u64) -> DeserializeResult<()>;
 
     /// The input contains an `u128`.
     ///
     /// Also see [`serde::de::Visitor::visit_u128`].
-    fn dyn_visit_u128(&mut self, v: u128) -> Result<(), Error>;
+    fn dyn_visit_u128(&mut self, v: u128) -> DeserializeResult<()>;
 
     /// The input contains an `f32`.
     ///
     /// Also see [`serde::de::Visitor::visit_f32`].
-    fn dyn_visit_f32(&mut self, v: f32) -> Result<(), Error>;
+    fn dyn_visit_f32(&mut self, v: f32) -> DeserializeResult<()>;
 
     /// The input contains an `f64`.
     ///
     /// Also see [`serde::de::Visitor::visit_f64`].
-    fn dyn_visit_f64(&mut self, v: f64) -> Result<(), Error>;
+    fn dyn_visit_f64(&mut self, v: f64) -> DeserializeResult<()>;
 
     /// The input contains a `char`.
     ///
     /// Also see [`serde::de::Visitor::visit_char`].
-    fn dyn_visit_char(&mut self, v: char) -> Result<(), Error>;
+    fn dyn_visit_char(&mut self, v: char) -> DeserializeResult<()>;
 
     /// The input contains a string. The lifetime of the string is ephemeral and
     /// it may be destroyed after this method returns.
     ///
     /// Also see [`serde::de::Visitor::visit_str`].
-    fn dyn_visit_str(&mut self, v: &str) -> Result<(), Error>;
+    fn dyn_visit_str(&mut self, v: &str) -> DeserializeResult<()>;
 
     /// The input contains a string that lives at least as long as the
     /// `Deserializer`.
     ///
     /// Also see [`serde::de::Visitor::visit_borrowed_str`].
-    fn dyn_visit_borrowed_str(&mut self, v: &'de str) -> Result<(), Error>;
+    fn dyn_visit_borrowed_str(&mut self, v: &'de str) -> DeserializeResult<()>;
 
     /// The input contains a string and ownership of the string is being given
     /// to the `Visitor`.
     ///
     /// Also see [`serde::de::Visitor::visit_string`].
-    fn dyn_visit_string(&mut self, v: String) -> Result<(), Error>;
+    #[cfg(any(feature = "std", feature = "alloc"))]
+    fn dyn_visit_string(&mut self, v: String) -> DeserializeResult<()>;
 
     /// The input contains a byte array. The lifetime of the byte array is
     /// ephemeral and it may be destroyed after this method returns.
     ///
     /// Also see [`serde::de::Visitor::visit_bytes`].
-    fn dyn_visit_bytes(&mut self, v: &[u8]) -> Result<(), Error>;
+    fn dyn_visit_bytes(&mut self, v: &[u8]) -> DeserializeResult<()>;
 
     /// The input contains a byte array that lives at least as long as the
     /// `Deserializer`.
     ///
     /// Also see [`serde::de::Visitor::visit_borrowed_bytes`].
-    fn dyn_visit_borrowed_bytes(&mut self, v: &'de [u8]) -> Result<(), Error>;
+    fn dyn_visit_borrowed_bytes(&mut self, v: &'de [u8]) -> DeserializeResult<()>;
 
     /// The input contains a byte array and ownership of the byte array is being
     /// given to the `Visitor`.
     ///
     /// Also see [`serde::de::Visitor::visit_byte_buf`].
-    fn dyn_visit_byte_buf(&mut self, v: Vec<u8>) -> Result<(), Error>;
+    #[cfg(any(feature = "std", feature = "alloc"))]
+    fn dyn_visit_byte_buf(&mut self, v: Vec<u8>) -> DeserializeResult<()>;
 
     /// The input contains an optional that is absent.
     ///
     /// Also see [`serde::de::Visitor::visit_none`].
-    fn dyn_visit_none(&mut self) -> Result<(), Error>;
+    fn dyn_visit_none(&mut self) -> DeserializeResult<()>;
 
     /// The input contains an optional that is present.
     ///
     /// Also see [`serde::de::Visitor::visit_some`].
-    fn dyn_visit_some(&mut self, deserializer: &mut dyn Deserializer<'de>) -> Result<(), Error>;
+    fn dyn_visit_some(&mut self, deserializer: &mut dyn Deserializer<'de>)
+    -> DeserializeResult<()>;
 
     /// The input contains a unit `()`.
     ///
     /// Also see [`serde::de::Visitor::visit_unit`].
-    fn dyn_visit_unit(&mut self) -> Result<(), Error>;
+    fn dyn_visit_unit(&mut self) -> DeserializeResult<()>;
 
     /// The input contains a newtype struct.
     ///
@@ -908,22 +916,22 @@ pub trait Visitor<'de> {
     fn dyn_visit_newtype_struct(
         &mut self,
         deserializer: &mut dyn Deserializer<'de>,
-    ) -> Result<(), Error>;
+    ) -> DeserializeResult<()>;
 
     /// The input contains a sequence of elements.
     ///
     /// Also see [`serde::de::Visitor::visit_seq`].
-    fn dyn_visit_seq(&mut self, seq: &mut dyn SeqAccess<'de>) -> Result<(), Error>;
+    fn dyn_visit_seq(&mut self, seq: &mut dyn SeqAccess<'de>) -> DeserializeResult<()>;
 
     /// The input contains a key-value map.
     ///
     /// Also see [`serde::de::Visitor::visit_map`].
-    fn dyn_visit_map(&mut self, map: &mut dyn MapAccess<'de>) -> Result<(), Error>;
+    fn dyn_visit_map(&mut self, map: &mut dyn MapAccess<'de>) -> DeserializeResult<()>;
 
     /// The input contains an enum.
     ///
     /// Also see [`serde::de::Visitor::visit_enum`].
-    fn dyn_visit_enum(&mut self, data: &mut dyn EnumAccess<'de>) -> Result<(), Error>;
+    fn dyn_visit_enum(&mut self, data: &mut dyn EnumAccess<'de>) -> DeserializeResult<()>;
 }
 
 impl<'de> serde::de::Visitor<'de> for &mut (dyn Visitor<'de> + '_) {
@@ -938,126 +946,145 @@ impl<'de> serde::de::Visitor<'de> for &mut (dyn Visitor<'de> + '_) {
     where
         E: serde::de::Error,
     {
-        self.dyn_visit_bool(v).map_err(Error::into_de_error)
+        self.dyn_visit_bool(v)
+            .map_err(DeserializeError::into_de_error)
     }
 
     fn visit_i8<E>(self, v: i8) -> Result<(), E>
     where
         E: serde::de::Error,
     {
-        self.dyn_visit_i8(v).map_err(Error::into_de_error)
+        self.dyn_visit_i8(v)
+            .map_err(DeserializeError::into_de_error)
     }
 
     fn visit_i16<E>(self, v: i16) -> Result<(), E>
     where
         E: serde::de::Error,
     {
-        self.dyn_visit_i16(v).map_err(Error::into_de_error)
+        self.dyn_visit_i16(v)
+            .map_err(DeserializeError::into_de_error)
     }
 
     fn visit_i32<E>(self, v: i32) -> Result<(), E>
     where
         E: serde::de::Error,
     {
-        self.dyn_visit_i32(v).map_err(Error::into_de_error)
+        self.dyn_visit_i32(v)
+            .map_err(DeserializeError::into_de_error)
     }
 
     fn visit_i64<E>(self, v: i64) -> Result<(), E>
     where
         E: serde::de::Error,
     {
-        self.dyn_visit_i64(v).map_err(Error::into_de_error)
+        self.dyn_visit_i64(v)
+            .map_err(DeserializeError::into_de_error)
     }
 
     fn visit_i128<E>(self, v: i128) -> Result<(), E>
     where
         E: serde::de::Error,
     {
-        self.dyn_visit_i128(v).map_err(Error::into_de_error)
+        self.dyn_visit_i128(v)
+            .map_err(DeserializeError::into_de_error)
     }
 
     fn visit_u8<E>(self, v: u8) -> Result<(), E>
     where
         E: serde::de::Error,
     {
-        self.dyn_visit_u8(v).map_err(Error::into_de_error)
+        self.dyn_visit_u8(v)
+            .map_err(DeserializeError::into_de_error)
     }
 
     fn visit_u16<E>(self, v: u16) -> Result<(), E>
     where
         E: serde::de::Error,
     {
-        self.dyn_visit_u16(v).map_err(Error::into_de_error)
+        self.dyn_visit_u16(v)
+            .map_err(DeserializeError::into_de_error)
     }
 
     fn visit_u32<E>(self, v: u32) -> Result<(), E>
     where
         E: serde::de::Error,
     {
-        self.dyn_visit_u32(v).map_err(Error::into_de_error)
+        self.dyn_visit_u32(v)
+            .map_err(DeserializeError::into_de_error)
     }
 
     fn visit_u64<E>(self, v: u64) -> Result<(), E>
     where
         E: serde::de::Error,
     {
-        self.dyn_visit_u64(v).map_err(Error::into_de_error)
+        self.dyn_visit_u64(v)
+            .map_err(DeserializeError::into_de_error)
     }
 
     fn visit_u128<E>(self, v: u128) -> Result<(), E>
     where
         E: serde::de::Error,
     {
-        self.dyn_visit_u128(v).map_err(Error::into_de_error)
+        self.dyn_visit_u128(v)
+            .map_err(DeserializeError::into_de_error)
     }
 
     fn visit_f32<E>(self, v: f32) -> Result<(), E>
     where
         E: serde::de::Error,
     {
-        self.dyn_visit_f32(v).map_err(Error::into_de_error)
+        self.dyn_visit_f32(v)
+            .map_err(DeserializeError::into_de_error)
     }
 
     fn visit_f64<E>(self, v: f64) -> Result<(), E>
     where
         E: serde::de::Error,
     {
-        self.dyn_visit_f64(v).map_err(Error::into_de_error)
+        self.dyn_visit_f64(v)
+            .map_err(DeserializeError::into_de_error)
     }
 
     fn visit_char<E>(self, v: char) -> Result<(), E>
     where
         E: serde::de::Error,
     {
-        self.dyn_visit_char(v).map_err(Error::into_de_error)
+        self.dyn_visit_char(v)
+            .map_err(DeserializeError::into_de_error)
     }
 
     fn visit_str<E>(self, v: &str) -> Result<(), E>
     where
         E: serde::de::Error,
     {
-        self.dyn_visit_str(v).map_err(Error::into_de_error)
+        self.dyn_visit_str(v)
+            .map_err(DeserializeError::into_de_error)
     }
 
     fn visit_borrowed_str<E>(self, v: &'de str) -> Result<(), E>
     where
         E: serde::de::Error,
     {
-        self.dyn_visit_borrowed_str(v).map_err(Error::into_de_error)
+        self.dyn_visit_borrowed_str(v)
+            .map_err(DeserializeError::into_de_error)
     }
 
+    #[cfg(any(feature = "std", feature = "alloc"))]
     fn visit_string<E>(self, v: String) -> Result<(), E>
     where
         E: serde::de::Error,
     {
-        self.dyn_visit_string(v).map_err(Error::into_de_error)
+        self.dyn_visit_string(v)
+            .map_err(DeserializeError::into_de_error)
     }
 
     fn visit_bytes<E>(self, v: &[u8]) -> Result<(), E>
     where
         E: serde::de::Error,
     {
-        self.dyn_visit_bytes(v).map_err(Error::into_de_error)
+        self.dyn_visit_bytes(v)
+            .map_err(DeserializeError::into_de_error)
     }
 
     fn visit_borrowed_bytes<E>(self, v: &'de [u8]) -> Result<(), E>
@@ -1065,21 +1092,24 @@ impl<'de> serde::de::Visitor<'de> for &mut (dyn Visitor<'de> + '_) {
         E: serde::de::Error,
     {
         self.dyn_visit_borrowed_bytes(v)
-            .map_err(Error::into_de_error)
+            .map_err(DeserializeError::into_de_error)
     }
 
+    #[cfg(any(feature = "std", feature = "alloc"))]
     fn visit_byte_buf<E>(self, v: Vec<u8>) -> Result<(), E>
     where
         E: serde::de::Error,
     {
-        self.dyn_visit_byte_buf(v).map_err(Error::into_de_error)
+        self.dyn_visit_byte_buf(v)
+            .map_err(DeserializeError::into_de_error)
     }
 
     fn visit_none<E>(self) -> Result<(), E>
     where
         E: serde::de::Error,
     {
-        self.dyn_visit_none().map_err(Error::into_de_error)
+        self.dyn_visit_none()
+            .map_err(DeserializeError::into_de_error)
     }
 
     fn visit_some<D>(self, deserializer: D) -> Result<(), D::Error>
@@ -1091,7 +1121,7 @@ impl<'de> serde::de::Visitor<'de> for &mut (dyn Visitor<'de> + '_) {
         if let InplaceDeserializer::Error(error) = deserializer {
             Err(error)
         } else {
-            result.map_err(Error::into_de_error)
+            result.map_err(DeserializeError::into_de_error)
         }
     }
 
@@ -1099,7 +1129,8 @@ impl<'de> serde::de::Visitor<'de> for &mut (dyn Visitor<'de> + '_) {
     where
         E: serde::de::Error,
     {
-        self.dyn_visit_unit().map_err(Error::into_de_error)
+        self.dyn_visit_unit()
+            .map_err(DeserializeError::into_de_error)
     }
 
     fn visit_newtype_struct<D>(self, deserializer: D) -> Result<(), D::Error>
@@ -1111,7 +1142,7 @@ impl<'de> serde::de::Visitor<'de> for &mut (dyn Visitor<'de> + '_) {
         if let InplaceDeserializer::Error(error) = deserializer {
             Err(error)
         } else {
-            result.map_err(Error::into_de_error)
+            result.map_err(DeserializeError::into_de_error)
         }
     }
 
@@ -1124,7 +1155,7 @@ impl<'de> serde::de::Visitor<'de> for &mut (dyn Visitor<'de> + '_) {
         if let InplaceSeqAccess::Error(error) = seq {
             Err(error)
         } else {
-            result.map_err(Error::into_de_error)
+            result.map_err(DeserializeError::into_de_error)
         }
     }
 
@@ -1137,7 +1168,7 @@ impl<'de> serde::de::Visitor<'de> for &mut (dyn Visitor<'de> + '_) {
         if let InplaceMapAccess::Error(error) = map {
             Err(error)
         } else {
-            result.map_err(Error::into_de_error)
+            result.map_err(DeserializeError::into_de_error)
         }
     }
 
@@ -1150,7 +1181,7 @@ impl<'de> serde::de::Visitor<'de> for &mut (dyn Visitor<'de> + '_) {
         if let InplaceEnumAccess::Error(error) = data {
             Err(error)
         } else {
-            result.map_err(Error::into_de_error)
+            result.map_err(DeserializeError::into_de_error)
         }
     }
 }
@@ -1176,9 +1207,9 @@ pub trait SeqAccess<'de> {
 }
 
 impl<'de> serde::de::SeqAccess<'de> for &mut (dyn SeqAccess<'de> + '_) {
-    type Error = Error;
+    type Error = DeserializeError;
 
-    fn next_element_seed<T>(&mut self, seed: T) -> Result<Option<T::Value>, Error>
+    fn next_element_seed<T>(&mut self, seed: T) -> DeserializeResult<Option<T::Value>>
     where
         T: serde::de::DeserializeSeed<'de>,
     {
@@ -1191,7 +1222,7 @@ impl<'de> serde::de::SeqAccess<'de> for &mut (dyn SeqAccess<'de> + '_) {
         } else {
             // The `unwrap_err` never panics because (1) `result` is checked not to be `Ok(None)`;
             // (2) `result` is `Ok(Some(_))` if and only if `seed` is `Value(_)`.
-            Err(Error::from(result.unwrap_err()))
+            Err(DeserializeError::from(result.unwrap_err()))
         }
     }
 
@@ -1238,9 +1269,9 @@ pub trait MapAccess<'de> {
 }
 
 impl<'de> serde::de::MapAccess<'de> for &mut (dyn MapAccess<'de> + '_) {
-    type Error = Error;
+    type Error = DeserializeError;
 
-    fn next_key_seed<K>(&mut self, seed: K) -> Result<Option<K::Value>, Error>
+    fn next_key_seed<K>(&mut self, seed: K) -> DeserializeResult<Option<K::Value>>
     where
         K: serde::de::DeserializeSeed<'de>,
     {
@@ -1253,11 +1284,11 @@ impl<'de> serde::de::MapAccess<'de> for &mut (dyn MapAccess<'de> + '_) {
         } else {
             // The `unwrap_err` never panics because (1) `result` is checked not to be `Ok(None)`;
             // (2) `result` is `Ok(Some(_))` if and only if `seed` is `Value(_)`.
-            Err(Error::from(result.unwrap_err()))
+            Err(DeserializeError::from(result.unwrap_err()))
         }
     }
 
-    fn next_value_seed<V>(&mut self, seed: V) -> Result<V::Value, Error>
+    fn next_value_seed<V>(&mut self, seed: V) -> DeserializeResult<V::Value>
     where
         V: serde::de::DeserializeSeed<'de>,
     {
@@ -1268,7 +1299,7 @@ impl<'de> serde::de::MapAccess<'de> for &mut (dyn MapAccess<'de> + '_) {
         } else {
             // The `unwrap_err` never panics because `result` is `Ok(_)` if and only if `seed` is
             // `Value(_)`.
-            Err(Error::from(result.unwrap_err()))
+            Err(DeserializeError::from(result.unwrap_err()))
         }
     }
 
@@ -1276,7 +1307,7 @@ impl<'de> serde::de::MapAccess<'de> for &mut (dyn MapAccess<'de> + '_) {
         &mut self,
         kseed: K,
         vseed: V,
-    ) -> Result<Option<(K::Value, V::Value)>, Error>
+    ) -> DeserializeResult<Option<(K::Value, V::Value)>>
     where
         K: serde::de::DeserializeSeed<'de>,
         V: serde::de::DeserializeSeed<'de>,
@@ -1293,7 +1324,7 @@ impl<'de> serde::de::MapAccess<'de> for &mut (dyn MapAccess<'de> + '_) {
         } else {
             // The `unwrap_err` never panics because (1) `result` is checked not to be `Ok(None)`;
             // (2) `result` is `Ok(Some(_))` if and only if both `kseed` and `vseed` are `Value(_)`.
-            Err(Error::from(result.unwrap_err()))
+            Err(DeserializeError::from(result.unwrap_err()))
         }
     }
 
@@ -1320,10 +1351,10 @@ pub trait EnumAccess<'de> {
 }
 
 impl<'a, 'de: 'a> serde::de::EnumAccess<'de> for &'a mut (dyn EnumAccess<'de> + '_) {
-    type Error = Error;
+    type Error = DeserializeError;
     type Variant = &'a mut dyn VariantAccess<'de>;
 
-    fn variant_seed<V>(self, seed: V) -> Result<(V::Value, Self::Variant), Error>
+    fn variant_seed<V>(self, seed: V) -> DeserializeResult<(V::Value, Self::Variant)>
     where
         V: serde::de::DeserializeSeed<'de>,
     {
@@ -1335,7 +1366,7 @@ impl<'a, 'de: 'a> serde::de::EnumAccess<'de> for &'a mut (dyn EnumAccess<'de> + 
                 // This is unreachable because `result` is `Ok(_)` if and only if `seed` is `Value`.
                 _ => unreachable!(),
             },
-            Err(error) => Err(Error::from(error)),
+            Err(error) => Err(DeserializeError::from(error)),
         }
     }
 }
@@ -1380,13 +1411,13 @@ pub trait VariantAccess<'de> {
 }
 
 impl<'de> serde::de::VariantAccess<'de> for &mut (dyn VariantAccess<'de> + '_) {
-    type Error = Error;
+    type Error = DeserializeError;
 
-    fn unit_variant(self) -> Result<(), Error> {
-        self.dyn_unit_variant().map_err(Error::from)
+    fn unit_variant(self) -> DeserializeResult<()> {
+        self.dyn_unit_variant().map_err(DeserializeError::from)
     }
 
-    fn newtype_variant_seed<T>(self, seed: T) -> Result<T::Value, Error>
+    fn newtype_variant_seed<T>(self, seed: T) -> DeserializeResult<T::Value>
     where
         T: serde::de::DeserializeSeed<'de>,
     {
@@ -1397,11 +1428,11 @@ impl<'de> serde::de::VariantAccess<'de> for &mut (dyn VariantAccess<'de> + '_) {
         } else {
             // The `unwrap_err` never panics because `result` is `Ok(_)` if and only if `seed` is
             // `Value(_)`.
-            Err(Error::from(result.unwrap_err()))
+            Err(DeserializeError::from(result.unwrap_err()))
         }
     }
 
-    fn tuple_variant<V>(self, len: usize, visitor: V) -> Result<V::Value, Error>
+    fn tuple_variant<V>(self, len: usize, visitor: V) -> DeserializeResult<V::Value>
     where
         V: serde::de::Visitor<'de>,
     {
@@ -1412,7 +1443,7 @@ impl<'de> serde::de::VariantAccess<'de> for &mut (dyn VariantAccess<'de> + '_) {
         } else {
             // The `unwrap_err` never panics because `result` is `Ok(_)` if and only if the
             // `visitor` is `Value(_)`.
-            Err(Error::from(result.unwrap_err()))
+            Err(DeserializeError::from(result.unwrap_err()))
         }
     }
 
@@ -1420,7 +1451,7 @@ impl<'de> serde::de::VariantAccess<'de> for &mut (dyn VariantAccess<'de> + '_) {
         self,
         fields: &'static [&'static str],
         visitor: V,
-    ) -> Result<V::Value, Error>
+    ) -> DeserializeResult<V::Value>
     where
         V: serde::de::Visitor<'de>,
     {
@@ -1431,12 +1462,140 @@ impl<'de> serde::de::VariantAccess<'de> for &mut (dyn VariantAccess<'de> + '_) {
         } else {
             // The `unwrap_err` never panics because `result` is `Ok(_)` if and only if the
             // `visitor` is `Value(_)`.
-            Err(Error::from(result.unwrap_err()))
+            Err(DeserializeError::from(result.unwrap_err()))
         }
     }
 }
 
-/// An implementation of the trait [`Deserializer`].
+/// [`Result`] type alias with error type [`DeserializeError`].
+pub type DeserializeResult<T> = Result<T, DeserializeError>;
+
+/// A universal implementation of the [`serde::de::Error`] trait.
+///
+/// This error tells why the dynamic deserialization failed and is returned by
+/// [`&mut dyn Deserializer`](crate::de::Deserializer) as [`serde::Deserializer`].
+pub enum DeserializeError {
+    /// The deserializer is in the wrong status.
+    DeserializerError(DeserializerError),
+
+    /// A custom error that is returned by [`serde::de::Error::custom`].
+    #[cfg(any(feature = "std", feature = "alloc"))]
+    Other(Box<str>),
+}
+
+impl DeserializeError {
+    /// Converts the error into an arbitrary [`serde::de::Error`].
+    #[cold]
+    #[must_use]
+    pub fn into_de_error<E: serde::de::Error>(self) -> E {
+        match self {
+            DeserializeError::DeserializerError(error) => E::custom(error),
+            #[cfg(any(feature = "std", feature = "alloc"))]
+            DeserializeError::Other(error) => E::custom(error),
+        }
+    }
+}
+
+impl From<DeserializerError> for DeserializeError {
+    #[cold]
+    #[inline(never)]
+    fn from(error: DeserializerError) -> Self {
+        DeserializeError::DeserializerError(error)
+    }
+}
+
+impl fmt::Debug for DeserializeError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            DeserializeError::DeserializerError(error) => error.fmt(f),
+            #[cfg(any(feature = "std", feature = "alloc"))]
+            DeserializeError::Other(error) => f.write_str(error),
+        }
+    }
+}
+
+impl fmt::Display for DeserializeError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            DeserializeError::DeserializerError(error) => error.fmt(f),
+            #[cfg(any(feature = "std", feature = "alloc"))]
+            DeserializeError::Other(error) => f.write_str(error),
+        }
+    }
+}
+
+impl error::Error for DeserializeError {
+    fn source(&self) -> Option<&(dyn error::Error + 'static)> {
+        match self {
+            DeserializeError::DeserializerError(error) => Some(error),
+            #[cfg(any(feature = "std", feature = "alloc"))]
+            DeserializeError::Other(_) => None,
+        }
+    }
+}
+
+impl serde::de::Error for DeserializeError {
+    #[cfg(any(feature = "std", feature = "alloc"))]
+    #[cold]
+    #[inline(never)]
+    fn custom<T: fmt::Display>(msg: T) -> Self {
+        DeserializeError::Other(msg.to_string().into_boxed_str())
+    }
+
+    #[cfg(not(any(feature = "std", feature = "alloc")))]
+    fn custom<T: fmt::Display>(_: T) -> Self {
+        DeserializeError::DeserializerError(DeserializerError::Error)
+    }
+}
+
+/// [`Result`] type alias with error type [`DeserializerError`].
+pub type DeserializerResult<T> = Result<T, DeserializerError>;
+
+/// An error that is returned by methods defined in [`Deserializer`].
+///
+/// This error just represents that the `Deserializer` is in the wrong status. It doesn't implement
+/// [`serde::de::Error`] and tells nothing about why the deserialization fails.
+///
+/// [`Deserializer`]: crate::de::Deserializer
+#[derive(Clone, Copy, Debug, Default)]
+pub enum DeserializerError {
+    /// An error occurred during the deserialization.
+    #[default]
+    Error,
+    /// The deserializer is not ready.
+    Deserializer,
+    /// The deserialize-seed is not ready.
+    DeserializeSeed,
+    /// The visitor is not ready.
+    Visitor,
+    /// The sequence access is not ready.
+    SeqAccess,
+    /// The map access is not ready.
+    MapAccess,
+    /// The enum access is not ready.
+    EnumAccess,
+    /// The enum variant access is not ready.
+    VariantAccess,
+}
+
+impl fmt::Display for DeserializerError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(match self {
+            DeserializerError::Error => "an error occurred during the deserialization",
+            DeserializerError::Deserializer => "the deserializer is not ready",
+            DeserializerError::DeserializeSeed => "the deserialize-seed is not ready",
+            DeserializerError::Visitor => "the visitor is not ready",
+            DeserializerError::SeqAccess => "the sequence access is not ready",
+            DeserializerError::MapAccess => "the map access is not ready",
+            DeserializerError::EnumAccess => "the enum access is not ready",
+            DeserializerError::VariantAccess => "the enum variant access is not ready",
+        })
+    }
+}
+
+impl error::Error for DeserializerError {}
+
+/// An implementation of the [`Deserializer`] trait.
 ///
 /// Also see [`serde::de::Deserializer`].
 #[derive(Debug, Default)]
@@ -1853,7 +2012,7 @@ impl<'de, D: serde::Deserializer<'de>> Deserializer<'de> for InplaceDeserializer
     }
 }
 
-/// An implementation of the trait [`DeserializeSeed`].
+/// An implementation of the [`DeserializeSeed`] trait.
 ///
 /// Also see [`serde::de::DeserializeSeed`].
 #[derive(Debug, Default)]
@@ -1870,17 +2029,20 @@ pub enum InplaceDeserializeSeed<'de, T: serde::de::DeserializeSeed<'de>> {
 impl<'de, T: serde::de::DeserializeSeed<'de>> DeserializeSeed<'de>
     for InplaceDeserializeSeed<'de, T>
 {
-    fn dyn_deserialize(&mut self, deserializer: &mut dyn Deserializer<'de>) -> Result<(), Error> {
+    fn dyn_deserialize(
+        &mut self,
+        deserializer: &mut dyn Deserializer<'de>,
+    ) -> DeserializeResult<()> {
         if let InplaceDeserializeSeed::DeserializeSeed(seed) = mem::take(self) {
             seed.deserialize(deserializer)
                 .map(|value| *self = InplaceDeserializeSeed::Value(value))
         } else {
-            Err(Error::from(DeserializerError::DeserializeSeed))
+            Err(DeserializeError::from(DeserializerError::DeserializeSeed))
         }
     }
 }
 
-/// An implementation of the trait [`Visitor`].
+/// An implementation of the [`Visitor`] trait.
 ///
 /// Also see [`serde::de::Visitor`].
 #[derive(Debug, Default)]
@@ -1903,281 +2065,286 @@ impl<'de, V: serde::de::Visitor<'de>> Visitor<'de> for InplaceVisitor<'de, V> {
         }
     }
 
-    fn dyn_visit_bool(&mut self, v: bool) -> Result<(), Error> {
+    fn dyn_visit_bool(&mut self, v: bool) -> DeserializeResult<()> {
         if let InplaceVisitor::Visitor(visitor) = mem::take(self) {
             visitor
                 .visit_bool(v)
                 .map(|value| *self = InplaceVisitor::Value(value))
         } else {
-            Err(Error::from(DeserializerError::Visitor))
+            Err(DeserializeError::from(DeserializerError::Visitor))
         }
     }
 
-    fn dyn_visit_i8(&mut self, v: i8) -> Result<(), Error> {
+    fn dyn_visit_i8(&mut self, v: i8) -> DeserializeResult<()> {
         if let InplaceVisitor::Visitor(visitor) = mem::take(self) {
             visitor
                 .visit_i8(v)
                 .map(|value| *self = InplaceVisitor::Value(value))
         } else {
-            Err(Error::from(DeserializerError::Visitor))
+            Err(DeserializeError::from(DeserializerError::Visitor))
         }
     }
 
-    fn dyn_visit_i16(&mut self, v: i16) -> Result<(), Error> {
+    fn dyn_visit_i16(&mut self, v: i16) -> DeserializeResult<()> {
         if let InplaceVisitor::Visitor(visitor) = mem::take(self) {
             visitor
                 .visit_i16(v)
                 .map(|value| *self = InplaceVisitor::Value(value))
         } else {
-            Err(Error::from(DeserializerError::Visitor))
+            Err(DeserializeError::from(DeserializerError::Visitor))
         }
     }
 
-    fn dyn_visit_i32(&mut self, v: i32) -> Result<(), Error> {
+    fn dyn_visit_i32(&mut self, v: i32) -> DeserializeResult<()> {
         if let InplaceVisitor::Visitor(visitor) = mem::take(self) {
             visitor
                 .visit_i32(v)
                 .map(|value| *self = InplaceVisitor::Value(value))
         } else {
-            Err(Error::from(DeserializerError::Visitor))
+            Err(DeserializeError::from(DeserializerError::Visitor))
         }
     }
 
-    fn dyn_visit_i64(&mut self, v: i64) -> Result<(), Error> {
+    fn dyn_visit_i64(&mut self, v: i64) -> DeserializeResult<()> {
         if let InplaceVisitor::Visitor(visitor) = mem::take(self) {
             visitor
                 .visit_i64(v)
                 .map(|value| *self = InplaceVisitor::Value(value))
         } else {
-            Err(Error::from(DeserializerError::Visitor))
+            Err(DeserializeError::from(DeserializerError::Visitor))
         }
     }
 
-    fn dyn_visit_i128(&mut self, v: i128) -> Result<(), Error> {
+    fn dyn_visit_i128(&mut self, v: i128) -> DeserializeResult<()> {
         if let InplaceVisitor::Visitor(visitor) = mem::take(self) {
             visitor
                 .visit_i128(v)
                 .map(|value| *self = InplaceVisitor::Value(value))
         } else {
-            Err(Error::from(DeserializerError::Visitor))
+            Err(DeserializeError::from(DeserializerError::Visitor))
         }
     }
 
-    fn dyn_visit_u8(&mut self, v: u8) -> Result<(), Error> {
+    fn dyn_visit_u8(&mut self, v: u8) -> DeserializeResult<()> {
         if let InplaceVisitor::Visitor(visitor) = mem::take(self) {
             visitor
                 .visit_u8(v)
                 .map(|value| *self = InplaceVisitor::Value(value))
         } else {
-            Err(Error::from(DeserializerError::Visitor))
+            Err(DeserializeError::from(DeserializerError::Visitor))
         }
     }
 
-    fn dyn_visit_u16(&mut self, v: u16) -> Result<(), Error> {
+    fn dyn_visit_u16(&mut self, v: u16) -> DeserializeResult<()> {
         if let InplaceVisitor::Visitor(visitor) = mem::take(self) {
             visitor
                 .visit_u16(v)
                 .map(|value| *self = InplaceVisitor::Value(value))
         } else {
-            Err(Error::from(DeserializerError::Visitor))
+            Err(DeserializeError::from(DeserializerError::Visitor))
         }
     }
 
-    fn dyn_visit_u32(&mut self, v: u32) -> Result<(), Error> {
+    fn dyn_visit_u32(&mut self, v: u32) -> DeserializeResult<()> {
         if let InplaceVisitor::Visitor(visitor) = mem::take(self) {
             visitor
                 .visit_u32(v)
                 .map(|value| *self = InplaceVisitor::Value(value))
         } else {
-            Err(Error::from(DeserializerError::Visitor))
+            Err(DeserializeError::from(DeserializerError::Visitor))
         }
     }
 
-    fn dyn_visit_u64(&mut self, v: u64) -> Result<(), Error> {
+    fn dyn_visit_u64(&mut self, v: u64) -> DeserializeResult<()> {
         if let InplaceVisitor::Visitor(visitor) = mem::take(self) {
             visitor
                 .visit_u64(v)
                 .map(|value| *self = InplaceVisitor::Value(value))
         } else {
-            Err(Error::from(DeserializerError::Visitor))
+            Err(DeserializeError::from(DeserializerError::Visitor))
         }
     }
 
-    fn dyn_visit_u128(&mut self, v: u128) -> Result<(), Error> {
+    fn dyn_visit_u128(&mut self, v: u128) -> DeserializeResult<()> {
         if let InplaceVisitor::Visitor(visitor) = mem::take(self) {
             visitor
                 .visit_u128(v)
                 .map(|value| *self = InplaceVisitor::Value(value))
         } else {
-            Err(Error::from(DeserializerError::Visitor))
+            Err(DeserializeError::from(DeserializerError::Visitor))
         }
     }
 
-    fn dyn_visit_f32(&mut self, v: f32) -> Result<(), Error> {
+    fn dyn_visit_f32(&mut self, v: f32) -> DeserializeResult<()> {
         if let InplaceVisitor::Visitor(visitor) = mem::take(self) {
             visitor
                 .visit_f32(v)
                 .map(|value| *self = InplaceVisitor::Value(value))
         } else {
-            Err(Error::from(DeserializerError::Visitor))
+            Err(DeserializeError::from(DeserializerError::Visitor))
         }
     }
 
-    fn dyn_visit_f64(&mut self, v: f64) -> Result<(), Error> {
+    fn dyn_visit_f64(&mut self, v: f64) -> DeserializeResult<()> {
         if let InplaceVisitor::Visitor(visitor) = mem::take(self) {
             visitor
                 .visit_f64(v)
                 .map(|value| *self = InplaceVisitor::Value(value))
         } else {
-            Err(Error::from(DeserializerError::Visitor))
+            Err(DeserializeError::from(DeserializerError::Visitor))
         }
     }
 
-    fn dyn_visit_char(&mut self, v: char) -> Result<(), Error> {
+    fn dyn_visit_char(&mut self, v: char) -> DeserializeResult<()> {
         if let InplaceVisitor::Visitor(visitor) = mem::take(self) {
             visitor
                 .visit_char(v)
                 .map(|value| *self = InplaceVisitor::Value(value))
         } else {
-            Err(Error::from(DeserializerError::Visitor))
+            Err(DeserializeError::from(DeserializerError::Visitor))
         }
     }
 
-    fn dyn_visit_str(&mut self, v: &str) -> Result<(), Error> {
+    fn dyn_visit_str(&mut self, v: &str) -> DeserializeResult<()> {
         if let InplaceVisitor::Visitor(visitor) = mem::take(self) {
             visitor
                 .visit_str(v)
                 .map(|value| *self = InplaceVisitor::Value(value))
         } else {
-            Err(Error::from(DeserializerError::Visitor))
+            Err(DeserializeError::from(DeserializerError::Visitor))
         }
     }
 
-    fn dyn_visit_borrowed_str(&mut self, v: &'de str) -> Result<(), Error> {
+    fn dyn_visit_borrowed_str(&mut self, v: &'de str) -> DeserializeResult<()> {
         if let InplaceVisitor::Visitor(visitor) = mem::take(self) {
             visitor
                 .visit_borrowed_str(v)
                 .map(|value| *self = InplaceVisitor::Value(value))
         } else {
-            Err(Error::from(DeserializerError::Visitor))
+            Err(DeserializeError::from(DeserializerError::Visitor))
         }
     }
 
-    fn dyn_visit_string(&mut self, v: String) -> Result<(), Error> {
+    #[cfg(any(feature = "std", feature = "alloc"))]
+    fn dyn_visit_string(&mut self, v: String) -> DeserializeResult<()> {
         if let InplaceVisitor::Visitor(visitor) = mem::take(self) {
             visitor
                 .visit_string(v)
                 .map(|value| *self = InplaceVisitor::Value(value))
         } else {
-            Err(Error::from(DeserializerError::Visitor))
+            Err(DeserializeError::from(DeserializerError::Visitor))
         }
     }
 
-    fn dyn_visit_bytes(&mut self, v: &[u8]) -> Result<(), Error> {
+    fn dyn_visit_bytes(&mut self, v: &[u8]) -> DeserializeResult<()> {
         if let InplaceVisitor::Visitor(visitor) = mem::take(self) {
             visitor
                 .visit_bytes(v)
                 .map(|value| *self = InplaceVisitor::Value(value))
         } else {
-            Err(Error::from(DeserializerError::Visitor))
+            Err(DeserializeError::from(DeserializerError::Visitor))
         }
     }
 
-    fn dyn_visit_borrowed_bytes(&mut self, v: &'de [u8]) -> Result<(), Error> {
+    fn dyn_visit_borrowed_bytes(&mut self, v: &'de [u8]) -> DeserializeResult<()> {
         if let InplaceVisitor::Visitor(visitor) = mem::take(self) {
             visitor
                 .visit_borrowed_bytes(v)
                 .map(|value| *self = InplaceVisitor::Value(value))
         } else {
-            Err(Error::from(DeserializerError::Visitor))
+            Err(DeserializeError::from(DeserializerError::Visitor))
         }
     }
 
-    fn dyn_visit_byte_buf(&mut self, v: Vec<u8>) -> Result<(), Error> {
+    #[cfg(any(feature = "std", feature = "alloc"))]
+    fn dyn_visit_byte_buf(&mut self, v: Vec<u8>) -> DeserializeResult<()> {
         if let InplaceVisitor::Visitor(visitor) = mem::take(self) {
             visitor
                 .visit_byte_buf(v)
                 .map(|value| *self = InplaceVisitor::Value(value))
         } else {
-            Err(Error::from(DeserializerError::Visitor))
+            Err(DeserializeError::from(DeserializerError::Visitor))
         }
     }
 
-    fn dyn_visit_none(&mut self) -> Result<(), Error> {
+    fn dyn_visit_none(&mut self) -> DeserializeResult<()> {
         if let InplaceVisitor::Visitor(visitor) = mem::take(self) {
             visitor
                 .visit_none()
                 .map(|value| *self = InplaceVisitor::Value(value))
         } else {
-            Err(Error::from(DeserializerError::Visitor))
+            Err(DeserializeError::from(DeserializerError::Visitor))
         }
     }
 
-    fn dyn_visit_some(&mut self, deserializer: &mut dyn Deserializer<'de>) -> Result<(), Error> {
+    fn dyn_visit_some(
+        &mut self,
+        deserializer: &mut dyn Deserializer<'de>,
+    ) -> DeserializeResult<()> {
         if let InplaceVisitor::Visitor(visitor) = mem::take(self) {
             visitor
                 .visit_some(deserializer)
                 .map(|value| *self = InplaceVisitor::Value(value))
         } else {
-            Err(Error::from(DeserializerError::Visitor))
+            Err(DeserializeError::from(DeserializerError::Visitor))
         }
     }
 
-    fn dyn_visit_unit(&mut self) -> Result<(), Error> {
+    fn dyn_visit_unit(&mut self) -> DeserializeResult<()> {
         if let InplaceVisitor::Visitor(visitor) = mem::take(self) {
             visitor
                 .visit_unit()
                 .map(|value| *self = InplaceVisitor::Value(value))
         } else {
-            Err(Error::from(DeserializerError::Visitor))
+            Err(DeserializeError::from(DeserializerError::Visitor))
         }
     }
 
     fn dyn_visit_newtype_struct(
         &mut self,
         deserializer: &mut dyn Deserializer<'de>,
-    ) -> Result<(), Error> {
+    ) -> DeserializeResult<()> {
         if let InplaceVisitor::Visitor(visitor) = mem::take(self) {
             visitor
                 .visit_newtype_struct(deserializer)
                 .map(|value| *self = InplaceVisitor::Value(value))
         } else {
-            Err(Error::from(DeserializerError::Visitor))
+            Err(DeserializeError::from(DeserializerError::Visitor))
         }
     }
 
-    fn dyn_visit_seq(&mut self, seq: &mut dyn SeqAccess<'de>) -> Result<(), Error> {
+    fn dyn_visit_seq(&mut self, seq: &mut dyn SeqAccess<'de>) -> DeserializeResult<()> {
         if let InplaceVisitor::Visitor(visitor) = mem::take(self) {
             visitor
                 .visit_seq(seq)
                 .map(|value| *self = InplaceVisitor::Value(value))
         } else {
-            Err(Error::from(DeserializerError::Visitor))
+            Err(DeserializeError::from(DeserializerError::Visitor))
         }
     }
 
-    fn dyn_visit_map(&mut self, map: &mut dyn MapAccess<'de>) -> Result<(), Error> {
+    fn dyn_visit_map(&mut self, map: &mut dyn MapAccess<'de>) -> DeserializeResult<()> {
         if let InplaceVisitor::Visitor(visitor) = mem::take(self) {
             visitor
                 .visit_map(map)
                 .map(|value| *self = InplaceVisitor::Value(value))
         } else {
-            Err(Error::from(DeserializerError::Visitor))
+            Err(DeserializeError::from(DeserializerError::Visitor))
         }
     }
 
-    fn dyn_visit_enum(&mut self, data: &mut dyn EnumAccess<'de>) -> Result<(), Error> {
+    fn dyn_visit_enum(&mut self, data: &mut dyn EnumAccess<'de>) -> DeserializeResult<()> {
         if let InplaceVisitor::Visitor(visitor) = mem::take(self) {
             visitor
                 .visit_enum(data)
                 .map(|value| *self = InplaceVisitor::Value(value))
         } else {
-            Err(Error::from(DeserializerError::Visitor))
+            Err(DeserializeError::from(DeserializerError::Visitor))
         }
     }
 }
 
-/// An implementation of the trait [`SeqAccess`].
+/// An implementation of the [`SeqAccess`] trait.
 ///
 /// Also see [`serde::de::SeqAccess`].
 #[derive(Debug)]
@@ -2211,7 +2378,7 @@ impl<'de, A: serde::de::SeqAccess<'de>> SeqAccess<'de> for InplaceSeqAccess<'de,
     }
 }
 
-/// An implementation of the trait [`MapAccess`].
+/// An implementation of the [`MapAccess`] trait.
 ///
 /// Also see [`serde::de::MapAccess`].
 #[derive(Debug)]
@@ -2271,7 +2438,7 @@ impl<'de, A: serde::de::MapAccess<'de>> MapAccess<'de> for InplaceMapAccess<'de,
     }
 }
 
-/// An implementation of the trait [`EnumAccess`] and [`VariantAccess`].
+/// An implementation of the [`EnumAccess`] and [`VariantAccess`] traits.
 ///
 /// Also see [`serde::de::EnumAccess`] and [`serde::de::VariantAccess`].
 #[derive(Debug, Default)]
@@ -2311,6 +2478,8 @@ impl<'de, A: serde::de::EnumAccess<'de>> EnumAccess<'de> for InplaceEnumAccess<'
 
 impl<'de, A: serde::de::EnumAccess<'de>> VariantAccess<'de> for InplaceEnumAccess<'de, A> {
     fn dyn_unit_variant(&mut self) -> DeserializerResult<()> {
+        use serde::de::VariantAccess;
+
         if let InplaceEnumAccess::VariantAccess(access) = mem::take(self) {
             access.unit_variant().map_err(|error| {
                 *self = InplaceEnumAccess::Error(error);
@@ -2325,6 +2494,8 @@ impl<'de, A: serde::de::EnumAccess<'de>> VariantAccess<'de> for InplaceEnumAcces
         &mut self,
         seed: &mut dyn DeserializeSeed<'de>,
     ) -> DeserializerResult<()> {
+        use serde::de::VariantAccess;
+
         if let InplaceEnumAccess::VariantAccess(access) = mem::take(self) {
             access.newtype_variant_seed(seed).map_err(|error| {
                 *self = InplaceEnumAccess::Error(error);
@@ -2340,6 +2511,8 @@ impl<'de, A: serde::de::EnumAccess<'de>> VariantAccess<'de> for InplaceEnumAcces
         len: usize,
         visitor: &mut dyn Visitor<'de>,
     ) -> DeserializerResult<()> {
+        use serde::de::VariantAccess;
+
         if let InplaceEnumAccess::VariantAccess(access) = mem::take(self) {
             access.tuple_variant(len, visitor).map_err(|error| {
                 *self = InplaceEnumAccess::Error(error);
@@ -2355,6 +2528,8 @@ impl<'de, A: serde::de::EnumAccess<'de>> VariantAccess<'de> for InplaceEnumAcces
         fields: &'static [&'static str],
         visitor: &mut dyn Visitor<'de>,
     ) -> DeserializerResult<()> {
+        use serde::de::VariantAccess;
+
         if let InplaceEnumAccess::VariantAccess(access) = mem::take(self) {
             access.struct_variant(fields, visitor).map_err(|error| {
                 *self = InplaceEnumAccess::Error(error);

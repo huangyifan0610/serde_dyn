@@ -10,11 +10,10 @@
 #![deny(missing_docs)]
 #![deny(missing_debug_implementations)]
 
-#[cfg(not(feature = "std"))]
+#[cfg(all(not(feature = "std"), feature = "alloc"))]
 extern crate alloc;
 
 pub mod de;
-pub mod error;
 pub mod ser;
 
 // re-exports
