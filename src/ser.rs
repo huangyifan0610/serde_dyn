@@ -73,9 +73,10 @@ impl serde::Serialize for dyn Serialize + '_ {
             InplaceSerializer::Ok(ok) => Ok(ok),
             // `InplaceSerializer::Err(_)` implies `result` is `Err(SerializerError::Error)`.
             InplaceSerializer::Error(error) => Err(error),
-            // The `unwrap_err` never panics because `result` is `Ok(_)` if and only if
-            // the `serializer` is `Ok(_)`.
-            _ => Err(result.unwrap_err().into_ser_error()),
+            _ => match result {
+                Ok(_) => unreachable!("`result` is `Ok(_)` if and only if `serializer` is `Ok(_)`"),
+                Err(error) => Err(error.into_ser_error()),
+            },
         }
     }
 }
@@ -1112,180 +1113,179 @@ pub enum InplaceSerializer<S: serde::Serializer> {
 }
 
 impl<S: serde::Serializer> InplaceSerializer<S> {
-    fn emplace<T, F>(&mut self, f: F, r: Result<T, S::Error>) -> SerializerResult<()>
+    fn write_error(&mut self, error: S::Error) -> SerializerError {
+        *self = InplaceSerializer::Error(error);
+        SerializerError::Error
+    }
+
+    fn write_with<T, F>(&mut self, f: F, r: Result<T, S::Error>) -> SerializerResult<()>
     where
         F: FnOnce(T) -> Self,
     {
         match r {
             #[allow(clippy::unit_arg)]
             Ok(ok) => Ok(*self = f(ok)),
-            Err(err) => {
-                *self = InplaceSerializer::Error(err);
-                Err(SerializerError::Error)
-            }
+            Err(error) => Err(self.write_error(error)),
         }
     }
 }
 
 impl<S: serde::Serializer> Serializer for InplaceSerializer<S> {
     fn dyn_serialize_bool(&mut self, v: bool) -> SerializerResult<()> {
-        if let InplaceSerializer::Serializer(serializer) = mem::take(self) {
-            self.emplace(InplaceSerializer::Ok, serializer.serialize_bool(v))
+        if let InplaceSerializer::Serializer(ser) = mem::take(self) {
+            self.write_with(InplaceSerializer::Ok, ser.serialize_bool(v))
         } else {
             Err(SerializerError::Serializer)
         }
     }
 
     fn dyn_serialize_i8(&mut self, v: i8) -> SerializerResult<()> {
-        if let InplaceSerializer::Serializer(serializer) = mem::take(self) {
-            self.emplace(InplaceSerializer::Ok, serializer.serialize_i8(v))
+        if let InplaceSerializer::Serializer(ser) = mem::take(self) {
+            self.write_with(InplaceSerializer::Ok, ser.serialize_i8(v))
         } else {
             Err(SerializerError::Serializer)
         }
     }
 
     fn dyn_serialize_i16(&mut self, v: i16) -> SerializerResult<()> {
-        if let InplaceSerializer::Serializer(serializer) = mem::take(self) {
-            self.emplace(InplaceSerializer::Ok, serializer.serialize_i16(v))
+        if let InplaceSerializer::Serializer(ser) = mem::take(self) {
+            self.write_with(InplaceSerializer::Ok, ser.serialize_i16(v))
         } else {
             Err(SerializerError::Serializer)
         }
     }
 
     fn dyn_serialize_i32(&mut self, v: i32) -> SerializerResult<()> {
-        if let InplaceSerializer::Serializer(serializer) = mem::take(self) {
-            self.emplace(InplaceSerializer::Ok, serializer.serialize_i32(v))
+        if let InplaceSerializer::Serializer(ser) = mem::take(self) {
+            self.write_with(InplaceSerializer::Ok, ser.serialize_i32(v))
         } else {
             Err(SerializerError::Serializer)
         }
     }
 
     fn dyn_serialize_i64(&mut self, v: i64) -> SerializerResult<()> {
-        if let InplaceSerializer::Serializer(serializer) = mem::take(self) {
-            self.emplace(InplaceSerializer::Ok, serializer.serialize_i64(v))
+        if let InplaceSerializer::Serializer(ser) = mem::take(self) {
+            self.write_with(InplaceSerializer::Ok, ser.serialize_i64(v))
         } else {
             Err(SerializerError::Serializer)
         }
     }
 
     fn dyn_serialize_i128(&mut self, v: i128) -> SerializerResult<()> {
-        if let InplaceSerializer::Serializer(serializer) = mem::take(self) {
-            self.emplace(InplaceSerializer::Ok, serializer.serialize_i128(v))
+        if let InplaceSerializer::Serializer(ser) = mem::take(self) {
+            self.write_with(InplaceSerializer::Ok, ser.serialize_i128(v))
         } else {
             Err(SerializerError::Serializer)
         }
     }
 
     fn dyn_serialize_u8(&mut self, v: u8) -> SerializerResult<()> {
-        if let InplaceSerializer::Serializer(serializer) = mem::take(self) {
-            self.emplace(InplaceSerializer::Ok, serializer.serialize_u8(v))
+        if let InplaceSerializer::Serializer(ser) = mem::take(self) {
+            self.write_with(InplaceSerializer::Ok, ser.serialize_u8(v))
         } else {
             Err(SerializerError::Serializer)
         }
     }
 
     fn dyn_serialize_u16(&mut self, v: u16) -> SerializerResult<()> {
-        if let InplaceSerializer::Serializer(serializer) = mem::take(self) {
-            self.emplace(InplaceSerializer::Ok, serializer.serialize_u16(v))
+        if let InplaceSerializer::Serializer(ser) = mem::take(self) {
+            self.write_with(InplaceSerializer::Ok, ser.serialize_u16(v))
         } else {
             Err(SerializerError::Serializer)
         }
     }
 
     fn dyn_serialize_u32(&mut self, v: u32) -> SerializerResult<()> {
-        if let InplaceSerializer::Serializer(serializer) = mem::take(self) {
-            self.emplace(InplaceSerializer::Ok, serializer.serialize_u32(v))
+        if let InplaceSerializer::Serializer(ser) = mem::take(self) {
+            self.write_with(InplaceSerializer::Ok, ser.serialize_u32(v))
         } else {
             Err(SerializerError::Serializer)
         }
     }
 
     fn dyn_serialize_u64(&mut self, v: u64) -> SerializerResult<()> {
-        if let InplaceSerializer::Serializer(serializer) = mem::take(self) {
-            self.emplace(InplaceSerializer::Ok, serializer.serialize_u64(v))
+        if let InplaceSerializer::Serializer(ser) = mem::take(self) {
+            self.write_with(InplaceSerializer::Ok, ser.serialize_u64(v))
         } else {
             Err(SerializerError::Serializer)
         }
     }
 
     fn dyn_serialize_u128(&mut self, v: u128) -> SerializerResult<()> {
-        if let InplaceSerializer::Serializer(serializer) = mem::take(self) {
-            self.emplace(InplaceSerializer::Ok, serializer.serialize_u128(v))
+        if let InplaceSerializer::Serializer(ser) = mem::take(self) {
+            self.write_with(InplaceSerializer::Ok, ser.serialize_u128(v))
         } else {
             Err(SerializerError::Serializer)
         }
     }
 
     fn dyn_serialize_f32(&mut self, v: f32) -> SerializerResult<()> {
-        if let InplaceSerializer::Serializer(serializer) = mem::take(self) {
-            self.emplace(InplaceSerializer::Ok, serializer.serialize_f32(v))
+        if let InplaceSerializer::Serializer(ser) = mem::take(self) {
+            self.write_with(InplaceSerializer::Ok, ser.serialize_f32(v))
         } else {
             Err(SerializerError::Serializer)
         }
     }
 
     fn dyn_serialize_f64(&mut self, v: f64) -> SerializerResult<()> {
-        if let InplaceSerializer::Serializer(serializer) = mem::take(self) {
-            self.emplace(InplaceSerializer::Ok, serializer.serialize_f64(v))
+        if let InplaceSerializer::Serializer(ser) = mem::take(self) {
+            self.write_with(InplaceSerializer::Ok, ser.serialize_f64(v))
         } else {
             Err(SerializerError::Serializer)
         }
     }
 
     fn dyn_serialize_char(&mut self, v: char) -> SerializerResult<()> {
-        if let InplaceSerializer::Serializer(serializer) = mem::take(self) {
-            self.emplace(InplaceSerializer::Ok, serializer.serialize_char(v))
+        if let InplaceSerializer::Serializer(ser) = mem::take(self) {
+            self.write_with(InplaceSerializer::Ok, ser.serialize_char(v))
         } else {
             Err(SerializerError::Serializer)
         }
     }
 
     fn dyn_serialize_str(&mut self, v: &str) -> SerializerResult<()> {
-        if let InplaceSerializer::Serializer(serializer) = mem::take(self) {
-            self.emplace(InplaceSerializer::Ok, serializer.serialize_str(v))
+        if let InplaceSerializer::Serializer(ser) = mem::take(self) {
+            self.write_with(InplaceSerializer::Ok, ser.serialize_str(v))
         } else {
             Err(SerializerError::Serializer)
         }
     }
 
     fn dyn_serialize_bytes(&mut self, v: &[u8]) -> SerializerResult<()> {
-        if let InplaceSerializer::Serializer(serializer) = mem::take(self) {
-            self.emplace(InplaceSerializer::Ok, serializer.serialize_bytes(v))
+        if let InplaceSerializer::Serializer(ser) = mem::take(self) {
+            self.write_with(InplaceSerializer::Ok, ser.serialize_bytes(v))
         } else {
             Err(SerializerError::Serializer)
         }
     }
 
     fn dyn_serialize_none(&mut self) -> SerializerResult<()> {
-        if let InplaceSerializer::Serializer(serializer) = mem::take(self) {
-            self.emplace(InplaceSerializer::Ok, serializer.serialize_none())
+        if let InplaceSerializer::Serializer(ser) = mem::take(self) {
+            self.write_with(InplaceSerializer::Ok, ser.serialize_none())
         } else {
             Err(SerializerError::Serializer)
         }
     }
 
     fn dyn_serialize_some(&mut self, value: &dyn Serialize) -> SerializerResult<()> {
-        if let InplaceSerializer::Serializer(serializer) = mem::take(self) {
-            self.emplace(InplaceSerializer::Ok, serializer.serialize_some(value))
+        if let InplaceSerializer::Serializer(ser) = mem::take(self) {
+            self.write_with(InplaceSerializer::Ok, ser.serialize_some(value))
         } else {
             Err(SerializerError::Serializer)
         }
     }
 
     fn dyn_serialize_unit(&mut self) -> SerializerResult<()> {
-        if let InplaceSerializer::Serializer(serializer) = mem::take(self) {
-            self.emplace(InplaceSerializer::Ok, serializer.serialize_unit())
+        if let InplaceSerializer::Serializer(ser) = mem::take(self) {
+            self.write_with(InplaceSerializer::Ok, ser.serialize_unit())
         } else {
             Err(SerializerError::Serializer)
         }
     }
 
     fn dyn_serialize_unit_struct(&mut self, name: &'static str) -> SerializerResult<()> {
-        if let InplaceSerializer::Serializer(serializer) = mem::take(self) {
-            self.emplace(
-                InplaceSerializer::Ok,
-                serializer.serialize_unit_struct(name),
-            )
+        if let InplaceSerializer::Serializer(ser) = mem::take(self) {
+            self.write_with(InplaceSerializer::Ok, ser.serialize_unit_struct(name))
         } else {
             Err(SerializerError::Serializer)
         }
@@ -1297,10 +1297,10 @@ impl<S: serde::Serializer> Serializer for InplaceSerializer<S> {
         variant_index: u32,
         variant: &'static str,
     ) -> SerializerResult<()> {
-        if let InplaceSerializer::Serializer(serializer) = mem::take(self) {
-            self.emplace(
+        if let InplaceSerializer::Serializer(ser) = mem::take(self) {
+            self.write_with(
                 InplaceSerializer::Ok,
-                serializer.serialize_unit_variant(name, variant_index, variant),
+                ser.serialize_unit_variant(name, variant_index, variant),
             )
         } else {
             Err(SerializerError::Serializer)
@@ -1312,10 +1312,10 @@ impl<S: serde::Serializer> Serializer for InplaceSerializer<S> {
         name: &'static str,
         value: &dyn Serialize,
     ) -> SerializerResult<()> {
-        if let InplaceSerializer::Serializer(serializer) = mem::take(self) {
-            self.emplace(
+        if let InplaceSerializer::Serializer(ser) = mem::take(self) {
+            self.write_with(
                 InplaceSerializer::Ok,
-                serializer.serialize_newtype_struct(name, value),
+                ser.serialize_newtype_struct(name, value),
             )
         } else {
             Err(SerializerError::Serializer)
@@ -1329,10 +1329,10 @@ impl<S: serde::Serializer> Serializer for InplaceSerializer<S> {
         variant: &'static str,
         value: &dyn Serialize,
     ) -> SerializerResult<()> {
-        if let InplaceSerializer::Serializer(serializer) = mem::take(self) {
-            self.emplace(
+        if let InplaceSerializer::Serializer(ser) = mem::take(self) {
+            self.write_with(
                 InplaceSerializer::Ok,
-                serializer.serialize_newtype_variant(name, variant_index, variant, value),
+                ser.serialize_newtype_variant(name, variant_index, variant, value),
             )
         } else {
             Err(SerializerError::Serializer)
@@ -1340,11 +1340,8 @@ impl<S: serde::Serializer> Serializer for InplaceSerializer<S> {
     }
 
     fn dyn_serialize_seq(&mut self, len: Option<usize>) -> SerializerResult<&mut dyn SerializeSeq> {
-        if let InplaceSerializer::Serializer(serializer) = mem::take(self) {
-            self.emplace(
-                InplaceSerializer::SerializeSeq,
-                serializer.serialize_seq(len),
-            )?;
+        if let InplaceSerializer::Serializer(ser) = mem::take(self) {
+            self.write_with(InplaceSerializer::SerializeSeq, ser.serialize_seq(len))?;
             Ok(self)
         } else {
             Err(SerializerError::Serializer)
@@ -1352,11 +1349,8 @@ impl<S: serde::Serializer> Serializer for InplaceSerializer<S> {
     }
 
     fn dyn_serialize_tuple(&mut self, len: usize) -> SerializerResult<&mut dyn SerializeTuple> {
-        if let InplaceSerializer::Serializer(serializer) = mem::take(self) {
-            self.emplace(
-                InplaceSerializer::SerializeTuple,
-                serializer.serialize_tuple(len),
-            )?;
+        if let InplaceSerializer::Serializer(ser) = mem::take(self) {
+            self.write_with(InplaceSerializer::SerializeTuple, ser.serialize_tuple(len))?;
             Ok(self)
         } else {
             Err(SerializerError::Serializer)
@@ -1368,10 +1362,10 @@ impl<S: serde::Serializer> Serializer for InplaceSerializer<S> {
         name: &'static str,
         len: usize,
     ) -> SerializerResult<&mut dyn SerializeTupleStruct> {
-        if let InplaceSerializer::Serializer(serializer) = mem::take(self) {
-            self.emplace(
+        if let InplaceSerializer::Serializer(ser) = mem::take(self) {
+            self.write_with(
                 InplaceSerializer::SerializeTupleStruct,
-                serializer.serialize_tuple_struct(name, len),
+                ser.serialize_tuple_struct(name, len),
             )?;
             Ok(self)
         } else {
@@ -1386,10 +1380,10 @@ impl<S: serde::Serializer> Serializer for InplaceSerializer<S> {
         variant: &'static str,
         len: usize,
     ) -> SerializerResult<&mut dyn SerializeTupleVariant> {
-        if let InplaceSerializer::Serializer(serializer) = mem::take(self) {
-            self.emplace(
+        if let InplaceSerializer::Serializer(ser) = mem::take(self) {
+            self.write_with(
                 InplaceSerializer::SerializeTupleVariant,
-                serializer.serialize_tuple_variant(name, variant_index, variant, len),
+                ser.serialize_tuple_variant(name, variant_index, variant, len),
             )?;
             Ok(self)
         } else {
@@ -1398,11 +1392,8 @@ impl<S: serde::Serializer> Serializer for InplaceSerializer<S> {
     }
 
     fn dyn_serialize_map(&mut self, len: Option<usize>) -> SerializerResult<&mut dyn SerializeMap> {
-        if let InplaceSerializer::Serializer(serializer) = mem::take(self) {
-            self.emplace(
-                InplaceSerializer::SerializeMap,
-                serializer.serialize_map(len),
-            )?;
+        if let InplaceSerializer::Serializer(ser) = mem::take(self) {
+            self.write_with(InplaceSerializer::SerializeMap, ser.serialize_map(len))?;
             Ok(self)
         } else {
             Err(SerializerError::Serializer)
@@ -1414,10 +1405,10 @@ impl<S: serde::Serializer> Serializer for InplaceSerializer<S> {
         name: &'static str,
         len: usize,
     ) -> SerializerResult<&mut dyn SerializeStruct> {
-        if let InplaceSerializer::Serializer(serializer) = mem::take(self) {
-            self.emplace(
+        if let InplaceSerializer::Serializer(ser) = mem::take(self) {
+            self.write_with(
                 InplaceSerializer::SerializeStruct,
-                serializer.serialize_struct(name, len),
+                ser.serialize_struct(name, len),
             )?;
             Ok(self)
         } else {
@@ -1432,10 +1423,10 @@ impl<S: serde::Serializer> Serializer for InplaceSerializer<S> {
         variant: &'static str,
         len: usize,
     ) -> SerializerResult<&mut dyn SerializeStructVariant> {
-        if let InplaceSerializer::Serializer(serializer) = mem::take(self) {
-            self.emplace(
+        if let InplaceSerializer::Serializer(ser) = mem::take(self) {
+            self.write_with(
                 InplaceSerializer::SerializeStructVariant,
-                serializer.serialize_struct_variant(name, variant_index, variant, len),
+                ser.serialize_struct_variant(name, variant_index, variant, len),
             )?;
             Ok(self)
         } else {
@@ -1444,16 +1435,16 @@ impl<S: serde::Serializer> Serializer for InplaceSerializer<S> {
     }
 
     fn dyn_collect_str(&mut self, value: &dyn fmt::Display) -> SerializerResult<()> {
-        if let InplaceSerializer::Serializer(serializer) = mem::take(self) {
-            self.emplace(InplaceSerializer::Ok, serializer.collect_str(value))
+        if let InplaceSerializer::Serializer(ser) = mem::take(self) {
+            self.write_with(InplaceSerializer::Ok, ser.collect_str(value))
         } else {
             Err(SerializerError::Serializer)
         }
     }
 
     fn dyn_is_human_readable(&self) -> bool {
-        if let InplaceSerializer::Serializer(serializer) = self {
-            serializer.is_human_readable()
+        if let InplaceSerializer::Serializer(ser) = self {
+            ser.is_human_readable()
         } else {
             true
         }
@@ -1464,11 +1455,9 @@ impl<S: serde::Serializer> SerializeSeq for InplaceSerializer<S> {
     fn dyn_serialize_element(&mut self, value: &dyn Serialize) -> SerializerResult<()> {
         use serde::ser::SerializeSeq;
 
-        if let InplaceSerializer::SerializeSeq(serializer) = self {
-            serializer.serialize_element(value).map_err(|error| {
-                *self = InplaceSerializer::Error(error);
-                SerializerError::Error
-            })
+        if let InplaceSerializer::SerializeSeq(ser) = self {
+            ser.serialize_element(value)
+                .map_err(|error| self.write_error(error))
         } else {
             Err(SerializerError::SerializeSeq)
         }
@@ -1477,8 +1466,8 @@ impl<S: serde::Serializer> SerializeSeq for InplaceSerializer<S> {
     fn dyn_end(&mut self) -> SerializerResult<()> {
         use serde::ser::SerializeSeq;
 
-        if let InplaceSerializer::SerializeSeq(serializer) = mem::take(self) {
-            self.emplace(InplaceSerializer::Ok, serializer.end())
+        if let InplaceSerializer::SerializeSeq(ser) = mem::take(self) {
+            self.write_with(InplaceSerializer::Ok, ser.end())
         } else {
             Err(SerializerError::SerializeSeq)
         }
@@ -1489,11 +1478,9 @@ impl<S: serde::Serializer> SerializeTuple for InplaceSerializer<S> {
     fn dyn_serialize_element(&mut self, value: &dyn Serialize) -> SerializerResult<()> {
         use serde::ser::SerializeTuple;
 
-        if let InplaceSerializer::SerializeTuple(serializer) = self {
-            serializer.serialize_element(value).map_err(|error| {
-                *self = InplaceSerializer::Error(error);
-                SerializerError::Error
-            })
+        if let InplaceSerializer::SerializeTuple(ser) = self {
+            ser.serialize_element(value)
+                .map_err(|error| self.write_error(error))
         } else {
             Err(SerializerError::SerializeTuple)
         }
@@ -1502,8 +1489,8 @@ impl<S: serde::Serializer> SerializeTuple for InplaceSerializer<S> {
     fn dyn_end(&mut self) -> SerializerResult<()> {
         use serde::ser::SerializeTuple;
 
-        if let InplaceSerializer::SerializeTuple(serializer) = mem::take(self) {
-            self.emplace(InplaceSerializer::Ok, serializer.end())
+        if let InplaceSerializer::SerializeTuple(ser) = mem::take(self) {
+            self.write_with(InplaceSerializer::Ok, ser.end())
         } else {
             Err(SerializerError::SerializeTuple)
         }
@@ -1514,11 +1501,9 @@ impl<S: serde::Serializer> SerializeTupleStruct for InplaceSerializer<S> {
     fn dyn_serialize_field(&mut self, value: &dyn Serialize) -> SerializerResult<()> {
         use serde::ser::SerializeTupleStruct;
 
-        if let InplaceSerializer::SerializeTupleStruct(serializer) = self {
-            serializer.serialize_field(value).map_err(|error| {
-                *self = InplaceSerializer::Error(error);
-                SerializerError::Error
-            })
+        if let InplaceSerializer::SerializeTupleStruct(ser) = self {
+            ser.serialize_field(value)
+                .map_err(|error| self.write_error(error))
         } else {
             Err(SerializerError::SerializeTupleStruct)
         }
@@ -1527,8 +1512,8 @@ impl<S: serde::Serializer> SerializeTupleStruct for InplaceSerializer<S> {
     fn dyn_end(&mut self) -> SerializerResult<()> {
         use serde::ser::SerializeTupleStruct;
 
-        if let InplaceSerializer::SerializeTupleStruct(serializer) = mem::take(self) {
-            self.emplace(InplaceSerializer::Ok, serializer.end())
+        if let InplaceSerializer::SerializeTupleStruct(ser) = mem::take(self) {
+            self.write_with(InplaceSerializer::Ok, ser.end())
         } else {
             Err(SerializerError::SerializeTupleStruct)
         }
@@ -1539,11 +1524,9 @@ impl<S: serde::Serializer> SerializeTupleVariant for InplaceSerializer<S> {
     fn dyn_serialize_field(&mut self, value: &dyn Serialize) -> SerializerResult<()> {
         use serde::ser::SerializeTupleVariant;
 
-        if let InplaceSerializer::SerializeTupleVariant(serializer) = self {
-            serializer.serialize_field(value).map_err(|error| {
-                *self = InplaceSerializer::Error(error);
-                SerializerError::Error
-            })
+        if let InplaceSerializer::SerializeTupleVariant(ser) = self {
+            ser.serialize_field(value)
+                .map_err(|error| self.write_error(error))
         } else {
             Err(SerializerError::SerializeTupleVariant)
         }
@@ -1552,8 +1535,8 @@ impl<S: serde::Serializer> SerializeTupleVariant for InplaceSerializer<S> {
     fn dyn_end(&mut self) -> SerializerResult<()> {
         use serde::ser::SerializeTupleVariant;
 
-        if let InplaceSerializer::SerializeTupleVariant(serializer) = mem::take(self) {
-            self.emplace(InplaceSerializer::Ok, serializer.end())
+        if let InplaceSerializer::SerializeTupleVariant(ser) = mem::take(self) {
+            self.write_with(InplaceSerializer::Ok, ser.end())
         } else {
             Err(SerializerError::SerializeTupleVariant)
         }
@@ -1564,11 +1547,9 @@ impl<S: serde::Serializer> SerializeMap for InplaceSerializer<S> {
     fn dyn_serialize_key(&mut self, key: &dyn Serialize) -> SerializerResult<()> {
         use serde::ser::SerializeMap;
 
-        if let InplaceSerializer::SerializeMap(serializer) = self {
-            serializer.serialize_key(key).map_err(|error| {
-                *self = InplaceSerializer::Error(error);
-                SerializerError::Error
-            })
+        if let InplaceSerializer::SerializeMap(ser) = self {
+            ser.serialize_key(key)
+                .map_err(|error| self.write_error(error))
         } else {
             Err(SerializerError::SerializeMap)
         }
@@ -1577,11 +1558,9 @@ impl<S: serde::Serializer> SerializeMap for InplaceSerializer<S> {
     fn dyn_serialize_value(&mut self, value: &dyn Serialize) -> SerializerResult<()> {
         use serde::ser::SerializeMap;
 
-        if let InplaceSerializer::SerializeMap(serializer) = self {
-            serializer.serialize_value(value).map_err(|error| {
-                *self = InplaceSerializer::Error(error);
-                SerializerError::Error
-            })
+        if let InplaceSerializer::SerializeMap(ser) = self {
+            ser.serialize_value(value)
+                .map_err(|error| self.write_error(error))
         } else {
             Err(SerializerError::SerializeMap)
         }
@@ -1594,11 +1573,9 @@ impl<S: serde::Serializer> SerializeMap for InplaceSerializer<S> {
     ) -> SerializerResult<()> {
         use serde::ser::SerializeMap;
 
-        if let InplaceSerializer::SerializeMap(serializer) = self {
-            serializer.serialize_entry(key, value).map_err(|error| {
-                *self = InplaceSerializer::Error(error);
-                SerializerError::Error
-            })
+        if let InplaceSerializer::SerializeMap(ser) = self {
+            ser.serialize_entry(key, value)
+                .map_err(|error| self.write_error(error))
         } else {
             Err(SerializerError::SerializeMap)
         }
@@ -1607,8 +1584,8 @@ impl<S: serde::Serializer> SerializeMap for InplaceSerializer<S> {
     fn dyn_end(&mut self) -> SerializerResult<()> {
         use serde::ser::SerializeMap;
 
-        if let InplaceSerializer::SerializeMap(serializer) = mem::take(self) {
-            self.emplace(InplaceSerializer::Ok, serializer.end())
+        if let InplaceSerializer::SerializeMap(ser) = mem::take(self) {
+            self.write_with(InplaceSerializer::Ok, ser.end())
         } else {
             Err(SerializerError::SerializeMap)
         }
@@ -1623,11 +1600,9 @@ impl<S: serde::Serializer> SerializeStruct for InplaceSerializer<S> {
     ) -> SerializerResult<()> {
         use serde::ser::SerializeStruct;
 
-        if let InplaceSerializer::SerializeStruct(serializer) = self {
-            serializer.serialize_field(key, value).map_err(|error| {
-                *self = InplaceSerializer::Error(error);
-                SerializerError::Error
-            })
+        if let InplaceSerializer::SerializeStruct(ser) = self {
+            ser.serialize_field(key, value)
+                .map_err(|error| self.write_error(error))
         } else {
             Err(SerializerError::SerializeStruct)
         }
@@ -1636,11 +1611,8 @@ impl<S: serde::Serializer> SerializeStruct for InplaceSerializer<S> {
     fn dyn_skip_field(&mut self, key: &'static str) -> SerializerResult<()> {
         use serde::ser::SerializeStruct;
 
-        if let InplaceSerializer::SerializeStruct(serializer) = self {
-            serializer.skip_field(key).map_err(|error| {
-                *self = InplaceSerializer::Error(error);
-                SerializerError::Error
-            })
+        if let InplaceSerializer::SerializeStruct(ser) = self {
+            ser.skip_field(key).map_err(|error| self.write_error(error))
         } else {
             Err(SerializerError::SerializeStruct)
         }
@@ -1649,8 +1621,8 @@ impl<S: serde::Serializer> SerializeStruct for InplaceSerializer<S> {
     fn dyn_end(&mut self) -> SerializerResult<()> {
         use serde::ser::SerializeStruct;
 
-        if let InplaceSerializer::SerializeStruct(serializer) = mem::take(self) {
-            self.emplace(InplaceSerializer::Ok, serializer.end())
+        if let InplaceSerializer::SerializeStruct(ser) = mem::take(self) {
+            self.write_with(InplaceSerializer::Ok, ser.end())
         } else {
             Err(SerializerError::SerializeStruct)
         }
@@ -1665,11 +1637,9 @@ impl<S: serde::Serializer> SerializeStructVariant for InplaceSerializer<S> {
     ) -> SerializerResult<()> {
         use serde::ser::SerializeStructVariant;
 
-        if let InplaceSerializer::SerializeStructVariant(serializer) = self {
-            serializer.serialize_field(key, value).map_err(|error| {
-                *self = InplaceSerializer::Error(error);
-                SerializerError::Error
-            })
+        if let InplaceSerializer::SerializeStructVariant(ser) = self {
+            ser.serialize_field(key, value)
+                .map_err(|error| self.write_error(error))
         } else {
             Err(SerializerError::SerializeStructVariant)
         }
@@ -1678,11 +1648,8 @@ impl<S: serde::Serializer> SerializeStructVariant for InplaceSerializer<S> {
     fn dyn_skip_field(&mut self, key: &'static str) -> SerializerResult<()> {
         use serde::ser::SerializeStructVariant;
 
-        if let InplaceSerializer::SerializeStructVariant(serializer) = self {
-            serializer.skip_field(key).map_err(|error| {
-                *self = InplaceSerializer::Error(error);
-                SerializerError::Error
-            })
+        if let InplaceSerializer::SerializeStructVariant(ser) = self {
+            ser.skip_field(key).map_err(|error| self.write_error(error))
         } else {
             Err(SerializerError::SerializeStructVariant)
         }
@@ -1691,8 +1658,8 @@ impl<S: serde::Serializer> SerializeStructVariant for InplaceSerializer<S> {
     fn dyn_end(&mut self) -> SerializerResult<()> {
         use serde::ser::SerializeStructVariant;
 
-        if let InplaceSerializer::SerializeStructVariant(serializer) = mem::take(self) {
-            self.emplace(InplaceSerializer::Ok, serializer.end())
+        if let InplaceSerializer::SerializeStructVariant(ser) = mem::take(self) {
+            self.write_with(InplaceSerializer::Ok, ser.end())
         } else {
             Err(SerializerError::SerializeStructVariant)
         }
