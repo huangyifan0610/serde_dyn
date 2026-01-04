@@ -8,10 +8,15 @@
 
 use core::{error, fmt, mem};
 
+#[cfg(any(feature = "std", feature = "alloc"))]
+use core::num::NonZeroUsize;
+#[cfg(any(feature = "std", feature = "alloc"))]
+use core::ptr::NonNull;
+
 #[cfg(all(not(feature = "std"), feature = "alloc"))]
 use alloc::boxed::Box;
 #[cfg(all(not(feature = "std"), feature = "alloc"))]
-use alloc::string::ToString;
+use alloc::string::{String, ToString};
 
 /// A data structure that can be serialized with dynamic [`Serializer`].
 ///
@@ -588,7 +593,7 @@ impl<'a> serde::Serializer for &'a mut (dyn Serializer + '_) {
             .map_err(SerializeError::from)
     }
 
-    fn collect_seq<I>(self, iter: I) -> Result<Self::Ok, Self::Error>
+    fn collect_seq<I>(self, iter: I) -> SerializeResult<()>
     where
         I: IntoIterator,
         <I as IntoIterator>::Item: serde::Serialize,
@@ -605,7 +610,7 @@ impl<'a> serde::Serializer for &'a mut (dyn Serializer + '_) {
         serializer.dyn_end().map_err(SerializeError::from)
     }
 
-    fn collect_map<K, V, I>(self, iter: I) -> Result<Self::Ok, Self::Error>
+    fn collect_map<K, V, I>(self, iter: I) -> SerializeResult<()>
     where
         K: serde::Serialize,
         V: serde::Serialize,
@@ -935,92 +940,6 @@ impl serde::ser::SerializeStructVariant for &mut (dyn SerializeStructVariant + '
     }
 }
 
-/// TODO: documentation
-pub trait SeqAccess<'a, 'b: 'a> {
-    /// TODO: documentation
-    fn dyn_next(&'a mut self) -> Option<&'b mut dyn Serialize>;
-}
-
-/// Aliased to [`Result`] type with error type [`SerializeError`].
-pub type SerializeResult<T> = Result<T, SerializeError>;
-
-/// A universal implementation of the [`serde::ser::Error`] trait.
-///
-/// This error tells why the dynamic serialization failed and is returned by
-/// [`&mut dyn Serializer`](crate::ser::Serializer) as [`serde::Serializer`].
-pub enum SerializeError {
-    /// The serializer is in the wrong status.
-    Serializer(SerializerError),
-
-    /// A custom error that is returned by [`serde::ser::Error::custom`].
-    #[cfg(any(feature = "std", feature = "alloc"))]
-    Other(Box<str>),
-}
-
-impl SerializeError {
-    /// Converts the error into an arbitrary [`serde::ser::Error`].
-    #[cold]
-    #[must_use]
-    pub fn into_ser_error<E: serde::ser::Error>(self) -> E {
-        match self {
-            SerializeError::Serializer(error) => E::custom(error),
-            #[cfg(any(feature = "std", feature = "alloc"))]
-            SerializeError::Other(error) => E::custom(error),
-        }
-    }
-}
-
-impl From<SerializerError> for SerializeError {
-    #[inline]
-    fn from(value: SerializerError) -> Self {
-        SerializeError::Serializer(value)
-    }
-}
-
-impl fmt::Debug for SerializeError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            SerializeError::Serializer(error) => error.fmt(f),
-            #[cfg(any(feature = "std", feature = "alloc"))]
-            SerializeError::Other(error) => f.write_str(error),
-        }
-    }
-}
-
-impl fmt::Display for SerializeError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            SerializeError::Serializer(error) => error.fmt(f),
-            #[cfg(any(feature = "std", feature = "alloc"))]
-            SerializeError::Other(error) => f.write_str(error),
-        }
-    }
-}
-
-impl error::Error for SerializeError {
-    fn source(&self) -> Option<&(dyn error::Error + 'static)> {
-        match self {
-            SerializeError::Serializer(error) => Some(error),
-            #[cfg(any(feature = "std", feature = "alloc"))]
-            SerializeError::Other(_) => None,
-        }
-    }
-}
-
-impl serde::ser::Error for SerializeError {
-    #[cfg(any(feature = "std", feature = "alloc"))]
-    #[cold]
-    #[inline(never)]
-    fn custom<T: fmt::Display>(msg: T) -> Self {
-        SerializeError::Other(msg.to_string().into_boxed_str())
-    }
-
-    #[cfg(not(any(feature = "std", feature = "alloc")))]
-    fn custom<T: fmt::Display>(_: T) -> Self {
-        SerializeError::Serializer(SerializerError::Error)
-    }
-}
-
 /// Aliased to [`Result`] type with error type [`SerializerError`].
 pub type SerializerResult<T> = Result<T, SerializerError>;
 
@@ -1080,6 +999,180 @@ impl fmt::Display for SerializerError {
 }
 
 impl error::Error for SerializerError {}
+
+/// Aliased to [`Result`] type with error type [`SerializeError`].
+pub type SerializeResult<T> = Result<T, SerializeError>;
+
+/// A universal implementation of the [`serde::ser::Error`] trait.
+///
+/// This error tells why the dynamic serialization failed and is returned by
+/// [`&mut dyn Serializer`](crate::ser::Serializer) as [`serde::Serializer`].
+#[repr(transparent)]
+#[cfg_attr(not(any(feature = "std", feature = "alloc")), derive(Clone, Copy))]
+pub struct SerializeError(
+    #[cfg(any(feature = "std", feature = "alloc"))] NonNull<String>,
+    #[cfg(not(any(feature = "std", feature = "alloc")))] SerializerError,
+);
+
+impl SerializeError {
+    #[cold]
+    #[must_use]
+    fn into_ser_error<E: serde::ser::Error>(self) -> E {
+        #[cfg(any(feature = "std", feature = "alloc"))]
+        match self.into_string() {
+            Err(error) => E::custom(error),
+            Ok(error) => E::custom(error),
+        }
+
+        #[cfg(not(any(feature = "std", feature = "alloc")))]
+        {
+            E::custom(self.0)
+        }
+    }
+}
+
+#[cfg(any(feature = "std", feature = "alloc"))]
+impl SerializeError {
+    const fn encode(error: SerializerError) -> NonZeroUsize {
+        const ALIGN: usize = mem::align_of::<String>();
+        NonZeroUsize::new(((error as usize) << ALIGN.trailing_zeros()) | ALIGN.strict_sub(1))
+            .unwrap()
+    }
+
+    const fn decode(error: NonZeroUsize) -> Option<SerializerError> {
+        const SERIALIZE_ERROR_ERROR: NonZeroUsize = SerializeError::encode(SerializerError::Error);
+        const SERIALIZE_ERROR_SERIALIZER: NonZeroUsize =
+            SerializeError::encode(SerializerError::Serializer);
+        const SERIALIZE_ERROR_SERIALIZE_SEQ: NonZeroUsize =
+            SerializeError::encode(SerializerError::SerializeSeq);
+        const SERIALIZE_ERROR_SERIALIZE_TUPLE: NonZeroUsize =
+            SerializeError::encode(SerializerError::SerializeTuple);
+        const SERIALIZE_ERROR_SERIALIZE_TUPLE_STRUCT: NonZeroUsize =
+            SerializeError::encode(SerializerError::SerializeTupleStruct);
+        const SERIALIZE_ERROR_SERIALIZE_TUPLE_VARIANT: NonZeroUsize =
+            SerializeError::encode(SerializerError::SerializeTupleVariant);
+        const SERIALIZE_ERROR_SERIALIZE_MAP: NonZeroUsize =
+            SerializeError::encode(SerializerError::SerializeMap);
+        const SERIALIZE_ERROR_SERIALIZE_STRUCT: NonZeroUsize =
+            SerializeError::encode(SerializerError::SerializeStruct);
+        const SERIALIZE_ERROR_SERIALIZE_STRUCT_VARIANT: NonZeroUsize =
+            SerializeError::encode(SerializerError::SerializeStructVariant);
+
+        match error {
+            SERIALIZE_ERROR_ERROR => Some(SerializerError::Error),
+            SERIALIZE_ERROR_SERIALIZER => Some(SerializerError::Serializer),
+            SERIALIZE_ERROR_SERIALIZE_SEQ => Some(SerializerError::SerializeSeq),
+            SERIALIZE_ERROR_SERIALIZE_TUPLE => Some(SerializerError::SerializeTuple),
+            SERIALIZE_ERROR_SERIALIZE_TUPLE_STRUCT => Some(SerializerError::SerializeTupleStruct),
+            SERIALIZE_ERROR_SERIALIZE_TUPLE_VARIANT => Some(SerializerError::SerializeTupleVariant),
+            SERIALIZE_ERROR_SERIALIZE_MAP => Some(SerializerError::SerializeMap),
+            SERIALIZE_ERROR_SERIALIZE_STRUCT => Some(SerializerError::SerializeStruct),
+            SERIALIZE_ERROR_SERIALIZE_STRUCT_VARIANT => {
+                Some(SerializerError::SerializeStructVariant)
+            }
+            _ => None,
+        }
+    }
+
+    fn into_string(self) -> SerializerResult<String> {
+        let this = mem::ManuallyDrop::new(self);
+
+        match SerializeError::decode(this.0.expose_provenance()) {
+            Some(error) => Err(error),
+            // TODO: Replace `Box::from_raw` with `Box::from_non_null` once it's stablized.
+            // SAFETY: We have handled the `SerializerError` case.
+            None => Ok(*unsafe { Box::from_raw(this.0.as_ptr()) }),
+        }
+    }
+
+    fn as_string(&self) -> SerializerResult<&String> {
+        match SerializeError::decode(self.0.expose_provenance()) {
+            Some(error) => Err(error),
+            // SAFETY: We have handled the `SerializerError` case.
+            None => Ok(unsafe { self.0.as_ref() }),
+        }
+    }
+}
+
+#[cfg(any(feature = "std", feature = "alloc"))]
+impl Drop for SerializeError {
+    fn drop(&mut self) {
+        const REPLACEMENT: SerializeError = SerializeError(NonNull::without_provenance(
+            SerializeError::encode(SerializerError::Error),
+        ));
+
+        let _ = mem::replace(self, REPLACEMENT).into_string();
+    }
+}
+
+impl From<SerializerError> for SerializeError {
+    #[cold]
+    #[inline(never)]
+    fn from(value: SerializerError) -> Self {
+        #[cfg(any(feature = "std", feature = "alloc"))]
+        {
+            SerializeError(NonNull::without_provenance(SerializeError::encode(value)))
+        }
+
+        #[cfg(not(any(feature = "std", feature = "alloc")))]
+        {
+            SerializeError(value)
+        }
+    }
+}
+
+impl serde::ser::Error for SerializeError {
+    #[cold]
+    #[inline(never)]
+    fn custom<T: fmt::Display>(msg: T) -> Self {
+        #[cfg(any(feature = "std", feature = "alloc"))]
+        {
+            // TODO: Replace `Box::into_raw` with `Box::into_non_null` once it's stablized.
+            SerializeError(
+                NonNull::new(Box::into_raw(Box::new(msg.to_string())))
+                    .expect("`Box::into_raw` never returns null pointer"),
+            )
+        }
+
+        #[cfg(not(any(feature = "std", feature = "alloc")))]
+        {
+            let _ = msg;
+            SerializeError(SerializerError::Error)
+        }
+    }
+}
+
+impl fmt::Debug for SerializeError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        #[cfg(any(feature = "std", feature = "alloc"))]
+        match self.as_string() {
+            Ok(error) => f.write_str(error),
+            Err(error) => error.fmt(f),
+        }
+
+        #[cfg(not(any(feature = "std", feature = "alloc")))]
+        {
+            self.0.fmt(f)
+        }
+    }
+}
+
+impl fmt::Display for SerializeError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        #[cfg(any(feature = "std", feature = "alloc"))]
+        match self.as_string() {
+            Ok(error) => f.write_str(error),
+            Err(error) => error.fmt(f),
+        }
+
+        #[cfg(not(any(feature = "std", feature = "alloc")))]
+        {
+            self.0.fmt(f)
+        }
+    }
+}
+
+impl error::Error for SerializeError {}
 
 /// An implementation of the [`Serializer`] trait, which serves as a bridge between dynamic and
 /// static serialization.

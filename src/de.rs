@@ -5,6 +5,11 @@
 
 use core::{error, fmt, mem};
 
+#[cfg(any(feature = "std", feature = "alloc"))]
+use core::num::NonZeroUsize;
+#[cfg(any(feature = "std", feature = "alloc"))]
+use core::ptr::NonNull;
+
 #[cfg(all(not(feature = "std"), feature = "alloc"))]
 use alloc::boxed::Box;
 #[cfg(all(not(feature = "std"), feature = "alloc"))]
@@ -1295,8 +1300,7 @@ impl<'a, 'de: 'a> serde::de::EnumAccess<'de> for &'a mut (dyn EnumAccess<'de> + 
         match result {
             Ok(((), variant)) => match seed {
                 InplaceDeserializeSeed::Value(value) => Ok((value, variant)),
-                // This is unreachable because `result` is `Ok(_)` if and only if `seed` is `Value`.
-                _ => unreachable!(),
+                _ => unreachable!("`result` is `Ok(_)` if and only if `seed` is `Value(_)`"),
             },
             Err(error) => Err(DeserializeError::from(error)),
         }
@@ -1390,87 +1394,6 @@ impl<'de> serde::de::VariantAccess<'de> for &mut (dyn VariantAccess<'de> + '_) {
     }
 }
 
-/// [`Result`] type alias with error type [`DeserializeError`].
-pub type DeserializeResult<T> = Result<T, DeserializeError>;
-
-/// A universal implementation of the [`serde::de::Error`] trait.
-///
-/// This error tells why the dynamic deserialization failed and is returned by
-/// [`&mut dyn Deserializer`](crate::de::Deserializer) as [`serde::Deserializer`].
-pub enum DeserializeError {
-    /// The deserializer is in the wrong status.
-    DeserializerError(DeserializerError),
-
-    /// A custom error that is returned by [`serde::de::Error::custom`].
-    #[cfg(any(feature = "std", feature = "alloc"))]
-    Other(Box<str>),
-}
-
-impl DeserializeError {
-    /// Converts the error into an arbitrary [`serde::de::Error`].
-    #[cold]
-    #[must_use]
-    pub fn into_de_error<E: serde::de::Error>(self) -> E {
-        match self {
-            DeserializeError::DeserializerError(error) => E::custom(error),
-            #[cfg(any(feature = "std", feature = "alloc"))]
-            DeserializeError::Other(error) => E::custom(error),
-        }
-    }
-}
-
-impl From<DeserializerError> for DeserializeError {
-    #[cold]
-    #[inline(never)]
-    fn from(error: DeserializerError) -> Self {
-        DeserializeError::DeserializerError(error)
-    }
-}
-
-impl fmt::Debug for DeserializeError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            DeserializeError::DeserializerError(error) => error.fmt(f),
-            #[cfg(any(feature = "std", feature = "alloc"))]
-            DeserializeError::Other(error) => f.write_str(error),
-        }
-    }
-}
-
-impl fmt::Display for DeserializeError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            DeserializeError::DeserializerError(error) => error.fmt(f),
-            #[cfg(any(feature = "std", feature = "alloc"))]
-            DeserializeError::Other(error) => f.write_str(error),
-        }
-    }
-}
-
-impl error::Error for DeserializeError {
-    fn source(&self) -> Option<&(dyn error::Error + 'static)> {
-        match self {
-            DeserializeError::DeserializerError(error) => Some(error),
-            #[cfg(any(feature = "std", feature = "alloc"))]
-            DeserializeError::Other(_) => None,
-        }
-    }
-}
-
-impl serde::de::Error for DeserializeError {
-    #[cfg(any(feature = "std", feature = "alloc"))]
-    #[cold]
-    #[inline(never)]
-    fn custom<T: fmt::Display>(msg: T) -> Self {
-        DeserializeError::Other(msg.to_string().into_boxed_str())
-    }
-
-    #[cfg(not(any(feature = "std", feature = "alloc")))]
-    fn custom<T: fmt::Display>(_: T) -> Self {
-        DeserializeError::DeserializerError(DeserializerError::Error)
-    }
-}
-
 /// [`Result`] type alias with error type [`DeserializerError`].
 pub type DeserializerResult<T> = Result<T, DeserializerError>;
 
@@ -1517,6 +1440,176 @@ impl fmt::Display for DeserializerError {
 }
 
 impl error::Error for DeserializerError {}
+
+/// [`Result`] type alias with error type [`DeserializeError`].
+pub type DeserializeResult<T> = Result<T, DeserializeError>;
+
+/// A universal implementation of the [`serde::de::Error`] trait.
+///
+/// This error tells why the dynamic deserialization failed and is returned by
+/// [`&mut dyn Deserializer`](crate::de::Deserializer) as [`serde::Deserializer`].
+#[repr(transparent)]
+#[cfg_attr(not(any(feature = "std", feature = "alloc")), derive(Clone, Copy))]
+pub struct DeserializeError(
+    #[cfg(any(feature = "std", feature = "alloc"))] NonNull<String>,
+    #[cfg(not(any(feature = "std", feature = "alloc")))] DeserializerError,
+);
+
+impl DeserializeError {
+    #[cold]
+    #[must_use]
+    fn into_de_error<E: serde::de::Error>(self) -> E {
+        #[cfg(any(feature = "std", feature = "alloc"))]
+        match self.into_string() {
+            Err(error) => E::custom(error),
+            Ok(error) => E::custom(error),
+        }
+
+        #[cfg(not(any(feature = "std", feature = "alloc")))]
+        {
+            E::custom(self.0)
+        }
+    }
+}
+
+#[cfg(any(feature = "std", feature = "alloc"))]
+impl DeserializeError {
+    const fn encode(error: DeserializerError) -> NonZeroUsize {
+        const ALIGN: usize = mem::align_of::<String>();
+        NonZeroUsize::new(((error as usize) << ALIGN.trailing_zeros()) | ALIGN.strict_sub(1))
+            .unwrap()
+    }
+
+    const fn decode(error: NonZeroUsize) -> Option<DeserializerError> {
+        const DESERIALIZE_ERROR_ERROR: NonZeroUsize =
+            DeserializeError::encode(DeserializerError::Error);
+        const DESERIALIZE_ERROR_DESERIALIZER: NonZeroUsize =
+            DeserializeError::encode(DeserializerError::Deserializer);
+        const DESERIALIZE_ERROR_DESERIALIZE_SEED: NonZeroUsize =
+            DeserializeError::encode(DeserializerError::DeserializeSeed);
+        const DESERIALIZE_ERROR_VISITOR: NonZeroUsize =
+            DeserializeError::encode(DeserializerError::Visitor);
+        const DESERIALIZE_ERROR_SEQ_ACCESS: NonZeroUsize =
+            DeserializeError::encode(DeserializerError::SeqAccess);
+        const DESERIALIZE_ERROR_MAP_ACCESS: NonZeroUsize =
+            DeserializeError::encode(DeserializerError::MapAccess);
+        const DESERIALIZE_ERROR_ENUM_ACCESS: NonZeroUsize =
+            DeserializeError::encode(DeserializerError::EnumAccess);
+        const DESERIALIZE_ERROR_VARIANT_ACCESS: NonZeroUsize =
+            DeserializeError::encode(DeserializerError::VariantAccess);
+
+        match error {
+            DESERIALIZE_ERROR_ERROR => Some(DeserializerError::Error),
+            DESERIALIZE_ERROR_DESERIALIZER => Some(DeserializerError::Deserializer),
+            DESERIALIZE_ERROR_DESERIALIZE_SEED => Some(DeserializerError::DeserializeSeed),
+            DESERIALIZE_ERROR_VISITOR => Some(DeserializerError::Visitor),
+            DESERIALIZE_ERROR_SEQ_ACCESS => Some(DeserializerError::SeqAccess),
+            DESERIALIZE_ERROR_MAP_ACCESS => Some(DeserializerError::MapAccess),
+            DESERIALIZE_ERROR_ENUM_ACCESS => Some(DeserializerError::EnumAccess),
+            DESERIALIZE_ERROR_VARIANT_ACCESS => Some(DeserializerError::VariantAccess),
+            _ => None,
+        }
+    }
+
+    fn into_string(self) -> DeserializerResult<String> {
+        let this = mem::ManuallyDrop::new(self);
+
+        match DeserializeError::decode(this.0.expose_provenance()) {
+            Some(error) => Err(error),
+            // TODO: Replace `Box::from_raw` with `Box::from_non_null` once it's stablized.
+            // SAFETY: We have handled the `SerializerError` case.
+            None => Ok(*unsafe { Box::from_raw(this.0.as_ptr()) }),
+        }
+    }
+
+    fn as_string(&self) -> DeserializerResult<&String> {
+        match DeserializeError::decode(self.0.expose_provenance()) {
+            Some(error) => Err(error),
+            // SAFETY: We have handled the `SerializerError` case.
+            None => Ok(unsafe { self.0.as_ref() }),
+        }
+    }
+}
+
+#[cfg(any(feature = "std", feature = "alloc"))]
+impl Drop for DeserializeError {
+    fn drop(&mut self) {
+        const REPLACEMENT: DeserializeError = DeserializeError(NonNull::without_provenance(
+            DeserializeError::encode(DeserializerError::Error),
+        ));
+
+        let _ = mem::replace(self, REPLACEMENT).into_string();
+    }
+}
+
+impl From<DeserializerError> for DeserializeError {
+    #[cold]
+    #[inline(never)]
+    fn from(value: DeserializerError) -> Self {
+        #[cfg(any(feature = "std", feature = "alloc"))]
+        {
+            DeserializeError(NonNull::without_provenance(DeserializeError::encode(value)))
+        }
+
+        #[cfg(not(any(feature = "std", feature = "alloc")))]
+        {
+            DeserializeError(value)
+        }
+    }
+}
+
+impl serde::de::Error for DeserializeError {
+    #[cold]
+    #[inline(never)]
+    fn custom<T: fmt::Display>(msg: T) -> Self {
+        #[cfg(any(feature = "std", feature = "alloc"))]
+        {
+            // TODO: Replace `Box::into_raw` with `Box::into_non_null` once it's stablized.
+            DeserializeError(
+                NonNull::new(Box::into_raw(Box::new(msg.to_string())))
+                    .expect("`Box::into_raw` never returns null pointer"),
+            )
+        }
+
+        #[cfg(not(any(feature = "std", feature = "alloc")))]
+        {
+            let _ = msg;
+            DeserializeError(DeserializerError::Error)
+        }
+    }
+}
+
+impl fmt::Debug for DeserializeError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        #[cfg(any(feature = "std", feature = "alloc"))]
+        match self.as_string() {
+            Ok(error) => f.write_str(error),
+            Err(error) => error.fmt(f),
+        }
+
+        #[cfg(not(any(feature = "std", feature = "alloc")))]
+        {
+            self.0.fmt(f)
+        }
+    }
+}
+
+impl fmt::Display for DeserializeError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        #[cfg(any(feature = "std", feature = "alloc"))]
+        match self.as_string() {
+            Ok(error) => f.write_str(error),
+            Err(error) => error.fmt(f),
+        }
+
+        #[cfg(not(any(feature = "std", feature = "alloc")))]
+        {
+            self.0.fmt(f)
+        }
+    }
+}
+
+impl error::Error for DeserializeError {}
 
 /// An implementation of the [`Deserializer`] trait.
 ///
@@ -1886,8 +1979,8 @@ impl<'de, T: serde::de::DeserializeSeed<'de>> InplaceDeserializeSeed<'de, T> {
         ));
 
         match result {
-            Ok(_) => unreachable!(),
-            Err(error) => DeserializeError::DeserializerError(error),
+            Ok(_) => unreachable!("`result` is `Ok(_)` if and only if the seed is `Value(_)`"),
+            Err(error) => DeserializeError::from(error),
         }
     }
 }
@@ -1930,8 +2023,8 @@ impl<'de, V: serde::de::Visitor<'de>> InplaceVisitor<'de, V> {
         ));
 
         match result {
-            Ok(_) => unreachable!(),
-            Err(error) => DeserializeError::DeserializerError(error),
+            Ok(_) => unreachable!("`result` is `Ok(_)` if and only if the visitor is `Value(_)`"),
+            Err(error) => DeserializeError::from(error),
         }
     }
 }
