@@ -25,7 +25,7 @@ use alloc::vec::Vec;
 ///
 /// # Implementation
 ///
-/// Alhrough its legal to implement this trait directly, it's more recommended to use the provided
+/// Although its legal to implement this trait directly, it's more recommended to use the provided
 /// function `<dyn Deserializer>::new` to automatically convert [`serde::Deserializer`] into dynamic
 /// [`Deserializer`].
 ///
@@ -44,7 +44,7 @@ use alloc::vec::Vec;
 /// assert_eq!(value, "Hello, world!");
 /// ```    
 #[diagnostic::on_unimplemented(
-    note = "perfer `<dyn Deserializer>::new` instead of manually implementation"
+    note = "prefer `<dyn Deserializer>::new` instead of manually implementation"
 )]
 pub trait Deserializer<'de> {
     /// Require the `Deserializer` to figure out how to drive the visitor based
@@ -81,7 +81,7 @@ pub trait Deserializer<'de> {
     /// Hint that the `Deserialize` type is expecting an `i128` value.
     ///
     /// Also see [`serde::Deserializer::deserialize_i128`].  
-    fn dyn_deserialize_128(&mut self, visitor: &mut dyn Visitor<'de>) -> DeserializerResult<()>;
+    fn dyn_deserialize_i128(&mut self, visitor: &mut dyn Visitor<'de>) -> DeserializerResult<()>;
 
     /// Hint that the `Deserialize` type is expecting an `u8` value.
     ///
@@ -360,7 +360,7 @@ impl<'de> serde::Deserializer<'de> for &mut (dyn Deserializer<'de> + '_) {
         V: serde::de::Visitor<'de>,
     {
         let mut visitor = InplaceVisitor::Visitor(visitor);
-        let result = self.dyn_deserialize_128(&mut visitor);
+        let result = self.dyn_deserialize_i128(&mut visitor);
         match visitor {
             InplaceVisitor::Value(value) => Ok(value),
             visitor => Err(visitor.expect_err(result)),
@@ -1448,6 +1448,19 @@ pub type DeserializeResult<T> = Result<T, DeserializeError>;
 ///
 /// This error tells why the dynamic deserialization failed and is returned by
 /// [`&mut dyn Deserializer`](crate::de::Deserializer) as [`serde::Deserializer`].
+///
+/// # Note on `unsafe`
+///
+/// When `std` or `alloc` is enabled, this type does not store the message and the
+/// [`DeserializerError`] state separately. Instead, it keeps the message behind a pointer and
+/// packs the state into the pointer's unused low bits, so that the error stays pointer-sized
+/// (`#[repr(transparent)]`). Borrowing and reclaiming that pointer requires the only two
+/// `unsafe` operations in this crate, `NonNull::as_ref` and `Box::from_non_null`.
+///
+/// An `unsafe`-free implementation is entirely possible. For example, the pointer could be
+/// replaced by an enum holding either the [`DeserializerError`] state or the message (e.g.
+/// `Box<str>`), at the cost of a larger error representation. The `unsafe` here is therefore a
+/// deliberate optimization of error handling, not a necessity.
 #[repr(transparent)]
 #[cfg_attr(not(any(feature = "std", feature = "alloc")), derive(Clone, Copy))]
 pub struct DeserializeError(
@@ -1516,16 +1529,15 @@ impl DeserializeError {
 
         match DeserializeError::decode(this.0.expose_provenance()) {
             Some(error) => Err(error),
-            // TODO: Replace `Box::from_raw` with `Box::from_non_null` once it's stablized.
-            // SAFETY: We have handled the `SerializerError` case.
-            None => Ok(*unsafe { Box::from_raw(this.0.as_ptr()) }),
+            // SAFETY: We have handled the `DeserializerError` case.
+            None => Ok(*unsafe { Box::from_non_null(this.0) }),
         }
     }
 
     fn as_string(&self) -> DeserializerResult<&String> {
         match DeserializeError::decode(self.0.expose_provenance()) {
             Some(error) => Err(error),
-            // SAFETY: We have handled the `SerializerError` case.
+            // SAFETY: We have handled the `DeserializerError` case.
             None => Ok(unsafe { self.0.as_ref() }),
         }
     }
@@ -1564,11 +1576,7 @@ impl serde::de::Error for DeserializeError {
     fn custom<T: fmt::Display>(msg: T) -> Self {
         #[cfg(any(feature = "std", feature = "alloc"))]
         {
-            // TODO: Replace `Box::into_raw` with `Box::into_non_null` once it's stablized.
-            DeserializeError(
-                NonNull::new(Box::into_raw(Box::new(msg.to_string())))
-                    .expect("`Box::into_raw` never returns null pointer"),
-            )
+            DeserializeError(Box::into_non_null(Box::new(msg.to_string())))
         }
 
         #[cfg(not(any(feature = "std", feature = "alloc")))]
@@ -1687,7 +1695,7 @@ impl<'de, D: serde::Deserializer<'de>> Deserializer<'de> for InplaceDeserializer
         }
     }
 
-    fn dyn_deserialize_128(&mut self, visitor: &mut dyn Visitor<'de>) -> DeserializerResult<()> {
+    fn dyn_deserialize_i128(&mut self, visitor: &mut dyn Visitor<'de>) -> DeserializerResult<()> {
         if let InplaceDeserializer::Deserializer(de) = mem::take(self) {
             de.deserialize_i128(visitor)
                 .map_err(|error| self.write_error(error))

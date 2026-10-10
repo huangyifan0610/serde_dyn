@@ -72,55 +72,55 @@ fn test_deserialize_u64() {
 }
 
 #[test]
-fn test_serialize_f32() {
+fn test_deserialize_f32() {
     make_deserializer!(deserializer = "4.1415927");
     let value = <f32 as serde::Deserialize<'_>>::deserialize(deserializer).unwrap();
     assert_eq!(value, 4.1415927);
 }
 
 #[test]
-fn test_serialize_f64() {
+fn test_deserialize_f64() {
     make_deserializer!(deserializer = "5.141592653589793");
     let value = <f64 as serde::Deserialize<'_>>::deserialize(deserializer).unwrap();
     assert_eq!(value, 5.141592653589793);
 }
 
 #[test]
-fn test_serialize_char() {
+fn test_deserialize_char() {
     make_deserializer!(deserializer = "\"A\"");
     let value = <char as serde::Deserialize<'_>>::deserialize(deserializer).unwrap();
     assert_eq!(value, 'A');
 }
 
 #[test]
-fn test_serialize_str() {
+fn test_deserialize_str() {
     make_deserializer!(deserializer = "\"♥️\"");
     let value = <String as serde::Deserialize<'_>>::deserialize(deserializer).unwrap();
     assert_eq!(value, "♥️");
 }
 
 #[test]
-fn test_serialize_none() {
+fn test_deserialize_none() {
     make_deserializer!(deserializer = "null");
     let value = <Option<String> as serde::Deserialize<'_>>::deserialize(deserializer).unwrap();
     assert_eq!(value, None);
 }
 
 #[test]
-fn test_serialize_some() {
+fn test_deserialize_some() {
     make_deserializer!(deserializer = "\"♥️\"");
     let value = <Option<String> as serde::Deserialize<'_>>::deserialize(deserializer).unwrap();
     assert_eq!(value.as_deref(), Some("♥️"));
 }
 
 #[test]
-fn test_serialize_unit() {
+fn test_deserialize_unit() {
     make_deserializer!(deserializer = "null");
     let () = <() as serde::Deserialize<'_>>::deserialize(deserializer).unwrap();
 }
 
 #[test]
-fn test_serialize_unit_struct() {
+fn test_deserialize_unit_struct() {
     #[derive(Debug, PartialEq, Eq, serde::Deserialize)]
     struct UnitStruct;
 
@@ -130,7 +130,7 @@ fn test_serialize_unit_struct() {
 }
 
 #[test]
-fn test_serialize_unit_variant() {
+fn test_deserialize_unit_variant() {
     #[derive(Debug, PartialEq, Eq, serde::Deserialize)]
     enum Enum {
         UnitVariant,
@@ -142,7 +142,7 @@ fn test_serialize_unit_variant() {
 }
 
 #[test]
-fn test_serialize_newtype_struct() {
+fn test_deserialize_newtype_struct() {
     #[derive(Debug, PartialEq, Eq, serde::Deserialize)]
     struct NewtypeStruct(bool);
 
@@ -152,7 +152,7 @@ fn test_serialize_newtype_struct() {
 }
 
 #[test]
-fn test_serialize_newtype_variant() {
+fn test_deserialize_newtype_variant() {
     #[derive(Debug, PartialEq, Eq, serde::Deserialize)]
     enum Enum {
         NewtypeVariant(bool),
@@ -164,21 +164,21 @@ fn test_serialize_newtype_variant() {
 }
 
 #[test]
-fn test_serialize_seq() {
+fn test_deserialize_seq() {
     make_deserializer!(deserializer = "[3,1,4,1,5,9]");
     let value = <Vec<i32> as serde::Deserialize<'_>>::deserialize(deserializer).unwrap();
     assert_eq!(value, &[3, 1, 4, 1, 5, 9]);
 }
 
 #[test]
-fn test_serialize_tuple() {
+fn test_deserialize_tuple() {
     make_deserializer!(deserializer = "[true,null,255]");
     let value = <(bool, (), u8) as serde::Deserialize<'_>>::deserialize(deserializer).unwrap();
     assert_eq!(value, (true, (), 255));
 }
 
 #[test]
-fn test_serialize_tuple_struct() {
+fn test_deserialize_tuple_struct() {
     #[derive(Debug, PartialEq, Eq, serde::Deserialize)]
     struct TupleStruct(bool, (), u8);
 
@@ -188,7 +188,7 @@ fn test_serialize_tuple_struct() {
 }
 
 #[test]
-fn test_serialize_tuple_variant() {
+fn test_deserialize_tuple_variant() {
     #[derive(Debug, PartialEq, Eq, serde::Deserialize)]
     enum Enum {
         TupleVariant(bool, (), u8),
@@ -200,7 +200,7 @@ fn test_serialize_tuple_variant() {
 }
 
 #[test]
-fn test_serialize_struct() {
+fn test_deserialize_struct() {
     #[derive(Debug, PartialEq, Eq, serde::Deserialize)]
     struct Struct {
         a: bool,
@@ -212,7 +212,7 @@ fn test_serialize_struct() {
 }
 
 #[test]
-fn test_serialize_struct_variant() {
+fn test_deserialize_struct_variant() {
     #[derive(Debug, PartialEq, Eq, serde::Deserialize)]
     enum Enum {
         StructVariant { a: bool },

@@ -27,7 +27,7 @@ use alloc::string::{String, ToString};
 ///
 /// # Implementation
 ///
-/// Always perfer to implement [`serde::Serialize`] rather than [`Serialize`], because data types
+/// Always prefer to implement [`serde::Serialize`] rather than [`Serialize`], because data types
 /// that implement [`serde::Serialize`] automatically derive this trait thanks to the blanket
 /// implementation.
 ///
@@ -49,7 +49,7 @@ use alloc::string::{String, ToString};
 /// ```
 #[diagnostic::on_unimplemented(
     message = "the trait bound `{Self}: serde::Serialize` is not satisfied",
-    note = "the trait `serde_dyn::Serialize` is not implement for `{Self}`",
+    note = "the trait `serde_dyn::Serialize` is not implemented for `{Self}`",
     note = "because the trait `serde::Serialize` is not implemented for `{Self}`"
 )]
 pub trait Serialize {
@@ -90,14 +90,15 @@ impl serde::Serialize for dyn Serialize + '_ {
 ///
 /// This trait mirrors the functionality of [`serde::Serializer`] but is dyn-compatible. The
 /// mirrored functions always start with "dyn_", for example, `dyn_serialize_bool` in `Serializer`
-/// vs. `serialize_bool` in `serde::Serializer`. But these functions are not supported:
+/// vs. `serialize_bool` in `serde::Serializer`. But these functions have no corresponding dynamic
+/// version:
 ///
 /// - [`serde::Serializer::collect_seq`].
 /// - [`serde::Serializer::collect_map`].
 ///
 /// # Implementation
 ///
-/// Alhrough its legal to implement this trait directly, it's more recommended to use the provided
+/// Although its legal to implement this trait directly, it's more recommended to use the provided
 /// function `<dyn Serializer>::new` to automatically convert [`serde::Serializer`] into dynamic
 /// [`Serializer`].
 ///
@@ -129,7 +130,7 @@ impl serde::Serialize for dyn Serialize + '_ {
 /// assert_eq!(cbor, b"mHello, world!");
 /// ```
 ///
-/// It's also posiblie to treat `dyn Serializer` as common [`serde::Serializer`].
+/// It's also possible to treat `dyn Serializer` as common [`serde::Serializer`].
 ///
 /// ```
 /// # use serde_dyn::Serializer;
@@ -144,7 +145,7 @@ impl serde::Serialize for dyn Serialize + '_ {
 /// assert_eq!(json, b"[\"Hello\",\"World\"]");
 /// ```
 #[diagnostic::on_unimplemented(
-    note = "perfer `<dyn Serializer>::new` instead of manually implementation"
+    note = "prefer `<dyn Serializer>::new` instead of manually implementation"
 )]
 pub trait Serializer {
     /// Serialize a `bool` value.
@@ -1007,6 +1008,19 @@ pub type SerializeResult<T> = Result<T, SerializeError>;
 ///
 /// This error tells why the dynamic serialization failed and is returned by
 /// [`&mut dyn Serializer`](crate::ser::Serializer) as [`serde::Serializer`].
+///
+/// # Note on `unsafe`
+///
+/// When `std` or `alloc` is enabled, this type does not store the message and the
+/// [`SerializerError`] state separately. Instead, it keeps the message behind a pointer and
+/// packs the state into the pointer's unused low bits, so that the error stays pointer-sized
+/// (`#[repr(transparent)]`). Borrowing and reclaiming that pointer requires the only two
+/// `unsafe` operations in this crate, `NonNull::as_ref` and `Box::from_non_null`.
+///
+/// An `unsafe`-free implementation is entirely possible. For example, the pointer could be
+/// replaced by an enum holding either the [`SerializerError`] state or the message (e.g.
+/// `Box<str>`), at the cost of a larger error representation. The `unsafe` here is therefore a
+/// deliberate optimization of error handling, not a necessity.
 #[repr(transparent)]
 #[cfg_attr(not(any(feature = "std", feature = "alloc")), derive(Clone, Copy))]
 pub struct SerializeError(
@@ -1079,9 +1093,8 @@ impl SerializeError {
 
         match SerializeError::decode(this.0.expose_provenance()) {
             Some(error) => Err(error),
-            // TODO: Replace `Box::from_raw` with `Box::from_non_null` once it's stablized.
             // SAFETY: We have handled the `SerializerError` case.
-            None => Ok(*unsafe { Box::from_raw(this.0.as_ptr()) }),
+            None => Ok(*unsafe { Box::from_non_null(this.0) }),
         }
     }
 
@@ -1127,11 +1140,7 @@ impl serde::ser::Error for SerializeError {
     fn custom<T: fmt::Display>(msg: T) -> Self {
         #[cfg(any(feature = "std", feature = "alloc"))]
         {
-            // TODO: Replace `Box::into_raw` with `Box::into_non_null` once it's stablized.
-            SerializeError(
-                NonNull::new(Box::into_raw(Box::new(msg.to_string())))
-                    .expect("`Box::into_raw` never returns null pointer"),
-            )
+            SerializeError(Box::into_non_null(Box::new(msg.to_string())))
         }
 
         #[cfg(not(any(feature = "std", feature = "alloc")))]

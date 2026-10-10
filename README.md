@@ -2,8 +2,9 @@
 
 **Dynamic serialization and deserialization based on serde.**
 
-- No unsafe codes.
 - No-std and No-alloc supports.
+- An `unsafe`-free implementation is entirely possible; the only two `unsafe` 
+   operations are a deliberate optimization of error handling.
 
 ## Examples
 
@@ -86,17 +87,6 @@ serde_dyn = { version = "*", default-features = false }
 Note that, once both "std" and "alloc" feature flags are disabled, error
 messages in the dynamic serialization and deserialization would be discarded,
 but the serialization and deserialization procedure won't be affected.
-
-## Performance
-
-Some simple benchmarks could prove that the deserialization in `serde_dyn` is
-much faster than `erased_serde`. Because the later does a lot of memory
-allocations and manually manages a virtual table for an arbitrary object.
-
-Instead, `serde_dyn` uses in-place serialization and deserialization, allowing
-to get rid of _unsafe_ codes and eliminate most of the memory allocations. The
-only required allocation happens in the error handling, which makes it possible
-to support "no-alloc" feature.
 
 <br>
 
