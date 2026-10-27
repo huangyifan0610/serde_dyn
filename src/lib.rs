@@ -12,6 +12,7 @@
 
 #[cfg(all(not(feature = "std"), feature = "alloc"))]
 extern crate alloc;
+extern crate serde_core as serde;
 
 pub mod de;
 pub mod ser;

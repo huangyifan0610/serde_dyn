@@ -55,7 +55,7 @@ use alloc::string::{String, ToString};
 pub trait Serialize {
     /// Serialize this value into the given [`Serializer`].
     ///
-    /// Also see [`serde::Serialize::serialize`].
+    /// See also [`serde::Serialize::serialize`].
     fn dyn_serialize(&self, serializer: &mut dyn Serializer) -> SerializeResult<()>;
 }
 
@@ -150,102 +150,102 @@ impl serde::Serialize for dyn Serialize + '_ {
 pub trait Serializer {
     /// Serialize a `bool` value.
     ///
-    /// Also see [`serde::Serializer::serialize_bool`].
+    /// See also [`serde::Serializer::serialize_bool`].
     fn dyn_serialize_bool(&mut self, v: bool) -> SerializerResult<()>;
 
     /// Serialize an `i8` value.
     ///
-    /// Also see [`serde::Serializer::serialize_i8`].
+    /// See also [`serde::Serializer::serialize_i8`].
     fn dyn_serialize_i8(&mut self, v: i8) -> SerializerResult<()>;
 
     /// Serialize an `i16` value.
     ///
-    /// Also see [`serde::Serializer::serialize_i16`].
+    /// See also [`serde::Serializer::serialize_i16`].
     fn dyn_serialize_i16(&mut self, v: i16) -> SerializerResult<()>;
 
     /// Serialize an `i32` value.
     ///
-    /// Also see [`serde::Serializer::serialize_i32`].
+    /// See also [`serde::Serializer::serialize_i32`].
     fn dyn_serialize_i32(&mut self, v: i32) -> SerializerResult<()>;
 
     /// Serialize an `i64` value.
     ///
-    /// Also see [`serde::Serializer::serialize_i64`].
+    /// See also [`serde::Serializer::serialize_i64`].
     fn dyn_serialize_i64(&mut self, v: i64) -> SerializerResult<()>;
 
     /// Serialize an `i128` value.
     ///
-    /// Also see [`serde::Serializer::serialize_i128`].
+    /// See also [`serde::Serializer::serialize_i128`].
     fn dyn_serialize_i128(&mut self, v: i128) -> SerializerResult<()>;
 
     /// Serialize an `u8` value.
     ///
-    /// Also see [`serde::Serializer::serialize_u8`].
+    /// See also [`serde::Serializer::serialize_u8`].
     fn dyn_serialize_u8(&mut self, v: u8) -> SerializerResult<()>;
 
     /// Serialize an `u16` value.
     ///
-    /// Also see [`serde::Serializer::serialize_u16`].
+    /// See also [`serde::Serializer::serialize_u16`].
     fn dyn_serialize_u16(&mut self, v: u16) -> SerializerResult<()>;
 
     /// Serialize an `u32` value.
     ///
-    /// Also see [`serde::Serializer::serialize_u32`].
+    /// See also [`serde::Serializer::serialize_u32`].
     fn dyn_serialize_u32(&mut self, v: u32) -> SerializerResult<()>;
 
     /// Serialize an `u64` value.
     ///
-    /// Also see [`serde::Serializer::serialize_u64`].
+    /// See also [`serde::Serializer::serialize_u64`].
     fn dyn_serialize_u64(&mut self, v: u64) -> SerializerResult<()>;
 
     /// Serialize an `u128` value.
     ///
-    /// Also see [`serde::Serializer::serialize_u128`].
+    /// See also [`serde::Serializer::serialize_u128`].
     fn dyn_serialize_u128(&mut self, v: u128) -> SerializerResult<()>;
 
     /// Serialize an `f32` value.
     ///
-    /// Also see [`serde::Serializer::serialize_f32`].
+    /// See also [`serde::Serializer::serialize_f32`].
     fn dyn_serialize_f32(&mut self, v: f32) -> SerializerResult<()>;
 
     /// Serialize an `f64` value.
     ///
-    /// Also see [`serde::Serializer::serialize_f64`].
+    /// See also [`serde::Serializer::serialize_f64`].
     fn dyn_serialize_f64(&mut self, v: f64) -> SerializerResult<()>;
 
     /// Serialize a character.
     ///
-    /// Also see [`serde::Serializer::serialize_char`].
+    /// See also [`serde::Serializer::serialize_char`].
     fn dyn_serialize_char(&mut self, v: char) -> SerializerResult<()>;
 
     /// Serialize a string.
     ///
-    /// Also see [`serde::Serializer::serialize_str`].
+    /// See also [`serde::Serializer::serialize_str`].
     fn dyn_serialize_str(&mut self, v: &str) -> SerializerResult<()>;
 
     /// Serialize a chunk of raw byte data.
     ///
-    /// Also see [`serde::Serializer::serialize_bytes`].
+    /// See also [`serde::Serializer::serialize_bytes`].
     fn dyn_serialize_bytes(&mut self, v: &[u8]) -> SerializerResult<()>;
 
     /// Serialize a [`None`] value.
     ///
-    /// Also see [`serde::Serializer::serialize_none`].
+    /// See also [`serde::Serializer::serialize_none`].
     fn dyn_serialize_none(&mut self) -> SerializerResult<()>;
 
     /// Serialize a [`Some`]\(`v`\) value.
     ///
-    /// Also see [`serde::Serializer::serialize_some`].
+    /// See also [`serde::Serializer::serialize_some`].
     fn dyn_serialize_some(&mut self, value: &dyn Serialize) -> SerializerResult<()>;
 
     /// Serialize a `()` value.
     ///
-    /// Also see [`serde::Serializer::serialize_unit`].
+    /// See also [`serde::Serializer::serialize_unit`].
     fn dyn_serialize_unit(&mut self) -> SerializerResult<()>;
 
     /// Serialize a unit struct like `struct Unit` or `PhantomData<T>`.
     ///
-    /// Also see [`serde::Serializer::serialize_unit_struct`].
+    /// See also [`serde::Serializer::serialize_unit_struct`].
     fn dyn_serialize_unit_struct(&mut self, name: &'static str) -> SerializerResult<()>;
 
     /// Serialize a unit variant like `E::A` in `enum E { A, B }`.
@@ -253,7 +253,7 @@ pub trait Serializer {
     /// The `name` is the name of the enum, the `variant_index` is the index of this variant within
     /// the enum, and the `variant` is the name of the variant.
     ///
-    /// Also see [`serde::Serializer::serialize_unit_variant`].
+    /// See also [`serde::Serializer::serialize_unit_variant`].
     fn dyn_serialize_unit_variant(
         &mut self,
         name: &'static str,
@@ -263,7 +263,7 @@ pub trait Serializer {
 
     /// Serialize a newtype struct like `struct Millimeters(u8)`.
     ///
-    /// Also see [`serde::Serializer::serialize_newtype_struct`].
+    /// See also [`serde::Serializer::serialize_newtype_struct`].
     fn dyn_serialize_newtype_struct(
         &mut self,
         name: &'static str,
@@ -276,7 +276,7 @@ pub trait Serializer {
     /// the enum, and the `variant` is the name of the variant. The `value` is the data contained
     /// within this newtype variant.
     ///
-    /// Also see [`serde::Serializer::serialize_newtype_variant`].
+    /// See also [`serde::Serializer::serialize_newtype_variant`].
     fn dyn_serialize_newtype_variant(
         &mut self,
         name: &'static str,
@@ -288,20 +288,20 @@ pub trait Serializer {
     /// Begin to serialize a variably sized sequence. This call must be followed by zero or more
     /// calls to `dyn_serialize_element`, then a call to `dyn_end`.
     ///
-    /// Also see [`serde::Serializer::serialize_seq`].
+    /// See also [`serde::Serializer::serialize_seq`].
     fn dyn_serialize_seq(&mut self, len: Option<usize>) -> SerializerResult<&mut dyn SerializeSeq>;
 
     /// Begin to serialize a statically sized sequence whose length will be known at deserialization
     /// time without looking at the serialized data. This call must be followed by zero or more
     /// calls to `dyn_serialize_element`, then a call to `dyn_end`.
     ///
-    /// Also see [`serde::Serializer::serialize_tuple`].
+    /// See also [`serde::Serializer::serialize_tuple`].
     fn dyn_serialize_tuple(&mut self, len: usize) -> SerializerResult<&mut dyn SerializeTuple>;
 
     /// Begin to serialize a tuple struct like `struct Rgb(u8, u8, u8)`. This call must be followed
     /// by zero or more calls to `dyn_serialize_field`, then a call to `dyn_end`.
     ///
-    /// Also see [`serde::Serializer::serialize_tuple_struct`].
+    /// See also [`serde::Serializer::serialize_tuple_struct`].
     fn dyn_serialize_tuple_struct(
         &mut self,
         name: &'static str,
@@ -311,7 +311,7 @@ pub trait Serializer {
     /// Begin to serialize a tuple variant like `E::T` in `enum E { T(u8, u8) }`. This call must be
     /// followed by zero or more calls to `dyn_serialize_field`, then a call to `dyn_end`.
     ///
-    /// Also see [`serde::Serializer::serialize_tuple_variant`].
+    /// See also [`serde::Serializer::serialize_tuple_variant`].
     fn dyn_serialize_tuple_variant(
         &mut self,
         name: &'static str,
@@ -323,13 +323,13 @@ pub trait Serializer {
     /// Begin to serialize a map. This call must be followed by zero or more calls to
     /// `dyn_serialize_key` and `dyn_serialize_value`, then a call to `dyn_end`.
     ///
-    /// Also see [`serde::Serializer::serialize_map`].
+    /// See also [`serde::Serializer::serialize_map`].
     fn dyn_serialize_map(&mut self, len: Option<usize>) -> SerializerResult<&mut dyn SerializeMap>;
 
     /// Begin to serialize a struct like `struct Rgb { r: u8, g: u8, b: u8 }`. This call must be
     /// followed by zero or more calls to `dyn_serialize_field`, then a call to `dyn_end`.
     ///
-    /// Also see [`serde::Serializer::serialize_struct`].
+    /// See also [`serde::Serializer::serialize_struct`].
     fn dyn_serialize_struct(
         &mut self,
         name: &'static str,
@@ -340,7 +340,7 @@ pub trait Serializer {
     /// This call must be followed by zero or more calls to `dyn_serialize_field`, then a call to
     /// `dyn_end`.
     ///
-    /// Also see [`serde::Serializer::serialize_struct_variant`].
+    /// See also [`serde::Serializer::serialize_struct_variant`].
     fn dyn_serialize_struct_variant(
         &mut self,
         name: &'static str,
@@ -351,12 +351,12 @@ pub trait Serializer {
 
     /// Serialize a string produced by an implementation of `Display`.
     ///
-    /// Also see [`serde::Serializer::collect_str`]
+    /// See also [`serde::Serializer::collect_str`]
     fn dyn_collect_str(&mut self, value: &dyn fmt::Display) -> SerializerResult<()>;
 
     /// Determine whether `Serialize` implementations should serialize in human-readable form.
     ///
-    /// Also see [`serde::Serializer::is_human_readable`]
+    /// See also [`serde::Serializer::is_human_readable`]
     fn dyn_is_human_readable(&self) -> bool;
 }
 
@@ -645,16 +645,16 @@ impl<'a> serde::Serializer for &'a mut (dyn Serializer + '_) {
 
 /// Returned from [`Serializer::dyn_serialize_seq`].
 ///
-/// Also see [`serde::ser::SerializeSeq`].
+/// See also [`serde::ser::SerializeSeq`].
 pub trait SerializeSeq {
     /// Serialize a sequence element.
     ///
-    /// Also see [`serde::ser::SerializeSeq::serialize_element`].
+    /// See also [`serde::ser::SerializeSeq::serialize_element`].
     fn dyn_serialize_element(&mut self, value: &dyn Serialize) -> SerializerResult<()>;
 
     /// Finish serializing the sequence.
     ///
-    /// Also see [`serde::ser::SerializeSeq::end`].
+    /// See also [`serde::ser::SerializeSeq::end`].
     fn dyn_end(&mut self) -> SerializerResult<()>;
 }
 
@@ -679,16 +679,16 @@ impl serde::ser::SerializeSeq for &mut (dyn SerializeSeq + '_) {
 
 /// Returned from [`Serializer::dyn_serialize_tuple`].
 ///
-/// Also see [`serde::ser::SerializeTuple`].
+/// See also [`serde::ser::SerializeTuple`].
 pub trait SerializeTuple {
     /// Serialize a tuple element.
     ///
-    /// Also see [`serde::ser::SerializeTuple::serialize_element`].
+    /// See also [`serde::ser::SerializeTuple::serialize_element`].
     fn dyn_serialize_element(&mut self, value: &dyn Serialize) -> SerializerResult<()>;
 
     /// Finish serializing the tuple.
     ///
-    /// Also see [`serde::ser::SerializeTuple::end`].
+    /// See also [`serde::ser::SerializeTuple::end`].
     fn dyn_end(&mut self) -> SerializerResult<()>;
 }
 
@@ -713,16 +713,16 @@ impl serde::ser::SerializeTuple for &mut (dyn SerializeTuple + '_) {
 
 /// Returned from [`Serializer::dyn_serialize_tuple_struct`].
 ///
-/// Also see [`serde::ser::SerializeTupleStruct`].
+/// See also [`serde::ser::SerializeTupleStruct`].
 pub trait SerializeTupleStruct {
     /// Serialize a tuple struct field.
     ///
-    /// Also see [`serde::ser::SerializeTupleStruct::serialize_field`].
+    /// See also [`serde::ser::SerializeTupleStruct::serialize_field`].
     fn dyn_serialize_field(&mut self, value: &dyn Serialize) -> SerializerResult<()>;
 
     /// Finish serializing the tuple struct.
     ///
-    /// Also see [`serde::ser::SerializeTupleStruct::end`].
+    /// See also [`serde::ser::SerializeTupleStruct::end`].
     fn dyn_end(&mut self) -> SerializerResult<()>;
 }
 
@@ -747,16 +747,16 @@ impl serde::ser::SerializeTupleStruct for &mut (dyn SerializeTupleStruct + '_) {
 
 /// Returned from [`Serializer::dyn_serialize_tuple_variant`].
 ///
-/// Also see [`serde::ser::SerializeTupleVariant`].
+/// See also [`serde::ser::SerializeTupleVariant`].
 pub trait SerializeTupleVariant {
     /// Serialize a tuple variant field.
     ///
-    /// Also see [`serde::ser::SerializeTupleVariant::serialize_field`].
+    /// See also [`serde::ser::SerializeTupleVariant::serialize_field`].
     fn dyn_serialize_field(&mut self, value: &dyn Serialize) -> SerializerResult<()>;
 
     /// Finish serializing the tuple variant.
     ///
-    /// Also see [`serde::ser::SerializeTupleVariant::end`].
+    /// See also [`serde::ser::SerializeTupleVariant::end`].
     fn dyn_end(&mut self) -> SerializerResult<()>;
 }
 
@@ -781,21 +781,21 @@ impl serde::ser::SerializeTupleVariant for &mut (dyn SerializeTupleVariant + '_)
 
 /// Returned from [`Serializer::dyn_serialize_map`].
 ///
-/// Also see [`serde::ser::SerializeMap`].
+/// See also [`serde::ser::SerializeMap`].
 pub trait SerializeMap {
     /// Serialize a map key.
     ///
-    /// Also see [`serde::ser::SerializeMap::serialize_key`].
+    /// See also [`serde::ser::SerializeMap::serialize_key`].
     fn dyn_serialize_key(&mut self, key: &dyn Serialize) -> SerializerResult<()>;
 
     /// Serialize a map value.
     ///
-    /// Also see [`serde::ser::SerializeMap::serialize_value`].
+    /// See also [`serde::ser::SerializeMap::serialize_value`].
     fn dyn_serialize_value(&mut self, value: &dyn Serialize) -> SerializerResult<()>;
 
     /// Serialize a map entry consisting of a key and a value.
     ///
-    /// Also see [`serde::ser::SerializeMap::serialize_entry`].
+    /// See also [`serde::ser::SerializeMap::serialize_entry`].
     fn dyn_serialize_entry(
         &mut self,
         key: &dyn Serialize,
@@ -804,7 +804,7 @@ pub trait SerializeMap {
 
     /// Finish serializing the map.
     ///
-    /// Also see [`serde::ser::SerializeMap::end`].
+    /// See also [`serde::ser::SerializeMap::end`].
     fn dyn_end(&mut self) -> SerializerResult<()>;
 }
 
@@ -847,11 +847,11 @@ impl serde::ser::SerializeMap for &mut (dyn SerializeMap + '_) {
 
 /// Returned from [`Serializer::dyn_serialize_struct`].
 ///
-/// Also see [`serde::ser::SerializeStruct`].
+/// See also [`serde::ser::SerializeStruct`].
 pub trait SerializeStruct {
     /// Serialize a struct field.
     ///
-    /// Also see [`serde::ser::SerializeStruct::serialize_field`].
+    /// See also [`serde::ser::SerializeStruct::serialize_field`].
     fn dyn_serialize_field(
         &mut self,
         key: &'static str,
@@ -860,12 +860,12 @@ pub trait SerializeStruct {
 
     /// Indicate that a struct field has been skipped.
     ///
-    /// Also see [`serde::ser::SerializeStruct::skip_field`].
+    /// See also [`serde::ser::SerializeStruct::skip_field`].
     fn dyn_skip_field(&mut self, key: &'static str) -> SerializerResult<()>;
 
     /// Finish serializing the struct.
     ///
-    /// Also see [`serde::ser::SerializeStruct::end`].
+    /// See also [`serde::ser::SerializeStruct::end`].
     fn dyn_end(&mut self) -> SerializerResult<()>;
 }
 
@@ -895,11 +895,11 @@ impl serde::ser::SerializeStruct for &mut (dyn SerializeStruct + '_) {
 
 /// Returned from [`Serializer::dyn_serialize_struct_variant`].
 ///
-/// Also see [`serde::ser::SerializeStructVariant`].
+/// See also [`serde::ser::SerializeStructVariant`].
 pub trait SerializeStructVariant {
     /// Serialize a struct variant field.
     ///
-    /// Also see [`serde::ser::SerializeStructVariant::serialize_field`].
+    /// See also [`serde::ser::SerializeStructVariant::serialize_field`].
     fn dyn_serialize_field(
         &mut self,
         key: &'static str,
@@ -908,12 +908,12 @@ pub trait SerializeStructVariant {
 
     /// Indicate that a struct variant field has been skipped.
     ///
-    /// Also see [`serde::ser::SerializeStructVariant::skip_field`].
+    /// See also [`serde::ser::SerializeStructVariant::skip_field`].
     fn dyn_skip_field(&mut self, key: &'static str) -> SerializerResult<()>;
 
     /// Finish serializing the struct variant.
     ///
-    /// Also see [`serde::ser::SerializeStructVariant::end`].
+    /// See also [`serde::ser::SerializeStructVariant::end`].
     fn dyn_end(&mut self) -> SerializerResult<()>;
 }
 
